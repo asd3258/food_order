@@ -15,10 +15,14 @@ async function load() {
 }
 onMounted(load)
 
+// v0.7: admin accounts (e.g. admin_mike) don't show up in 快速登入 -- they can
+// still log in by typing the name into the free-text field above.
+const visibleUsers = computed(() => users.value.filter((u) => !u.is_admin))
+
 const filteredUsers = computed(() => {
   const q = quickSearch.value.trim().toLowerCase()
-  if (!q) return users.value
-  return users.value.filter((u) => u.name.toLowerCase().includes(q))
+  if (!q) return visibleUsers.value
+  return visibleUsers.value.filter((u) => u.name.toLowerCase().includes(q))
 })
 
 async function loginWithInput() {
