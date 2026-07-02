@@ -131,6 +131,7 @@ export interface UserProfile {
   id: number
   name: string
   order_count: number
+  is_admin: boolean
 }
 export interface HistoryEntry {
   id: number
@@ -152,14 +153,17 @@ export const api = {
   loginOrCreateUser: (name: string) => request<UserProfile>('/api/users', {
     method: 'POST', body: JSON.stringify({ name }),
   }),
-  renameUser: (id: number, name: string) => request<UserProfile>(`/api/users/${id}`, {
-    method: 'PATCH', body: JSON.stringify({ name }),
-  }),
-  deleteUser: (id: number) => request<void>(`/api/users/${id}`, { method: 'DELETE' }),
+  renameUser: (id: number, name: string, actingUser: string) => request<UserProfile>(
+    `/api/users/${id}${qs({ acting_user: actingUser })}`, {
+      method: 'PATCH', body: JSON.stringify({ name }),
+    }),
+  deleteUser: (id: number, actingUser: string) => request<void>(
+    `/api/users/${id}${qs({ acting_user: actingUser })}`, { method: 'DELETE' }),
 
   // Restaurants
   listRestaurants: (q?: string, type?: string) => request<RestaurantSummary[]>(
     `/api/restaurants${qs({ q, type })}`),
+  listRestaurantTypes: () => request<string[]>('/api/restaurants/types'),
   getRestaurantMenu: (id: number) => request<RestaurantDetail>(`/api/restaurants/${id}/menu`),
   createRestaurant: (payload: any) => request<RestaurantDetail>('/api/restaurants', {
     method: 'POST', body: JSON.stringify(payload),
@@ -167,6 +171,7 @@ export const api = {
   updateRestaurant: (id: number, payload: any) => request<RestaurantDetail>(`/api/restaurants/${id}`, {
     method: 'PUT', body: JSON.stringify(payload),
   }),
+  deleteRestaurant: (id: number) => request<void>(`/api/restaurants/${id}`, { method: 'DELETE' }),
   uploadPhoto: (id: number, imageUrl: string, caption = '') => request<Photo>(
     `/api/restaurants/${id}/photos`, { method: 'POST', body: JSON.stringify({ image_url: imageUrl, caption }) }),
   deletePhoto: (id: number, photoId: number) => request<void>(
@@ -214,4 +219,6 @@ export const api = {
   togglePayment: (historyId: number, user: string, actingUser: string) => request<HistoryPayment>(
     `/api/orders/history/${historyId}/payments/${encodeURIComponent(user)}${qs({ acting_user: actingUser })}`,
     { method: 'PATCH' }),
+  deleteHistory: (historyId: number, actingUser: string) => request<void>(
+    `/api/orders/history/${historyId}${qs({ acting_user: actingUser })}`, { method: 'DELETE' }),
 }

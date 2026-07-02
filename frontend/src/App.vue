@@ -34,9 +34,20 @@ function logout() {
       </div>
     </header>
 
-    <main class="content">
-      <router-view />
-    </main>
+    <div class="content-wrap">
+      <main class="content">
+        <router-view />
+      </main>
+      <!-- v0.7: logged-out users can still switch bottom-nav tabs, but can't
+           click into any content -- this overlay sits on top of (only) the
+           content area and routes any click to the login screen. -->
+      <div v-if="!userStore.isLoggedIn" class="lockout-overlay" @click="goLogin">
+        <div class="lockout-box">
+          <p>請先登入才能使用</p>
+          <button class="btn btn-primary" @click.stop="goLogin">登入</button>
+        </div>
+      </div>
+    </div>
 
     <BottomNav />
     <ConfirmDialog />

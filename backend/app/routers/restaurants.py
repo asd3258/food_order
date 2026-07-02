@@ -42,6 +42,16 @@ def list_restaurants(q: Optional[str] = None, type: Optional[str] = None,
     return restaurants
 
 
+@router.get("/types", response_model=list[str])
+def list_restaurant_types(db: Session = Depends(get_db)):
+    """v0.7: 餐廳類型 is no longer a fixed whitelist -- this returns the 4
+    baseline types plus any custom type someone has typed in on a restaurant,
+    so the filter chips on 餐廳清單/開單與投票 stay in sync automatically."""
+    used = {row[0] for row in db.query(models.Restaurant.type).distinct().all() if row[0]}
+    extra = sorted(t for t in used if t not in schemas.RESTAURANT_TYPES)
+    return list(schemas.RESTAURANT_TYPES) + extra
+
+
 @router.get("/{restaurant_id}/menu", response_model=schemas.RestaurantDetailOut)
 def get_restaurant_menu(restaurant_id: int, db: Session = Depends(get_db)):
     r = _restaurant_query(db).filter(models.Restaurant.id == restaurant_id).first()
@@ -52,10 +62,11 @@ def get_restaurant_menu(restaurant_id: int, db: Session = Depends(get_db)):
 
 @router.post("", response_model=schemas.RestaurantDetailOut)
 def create_restaurant(payload: schemas.RestaurantIn, db: Session = Depends(get_db)):
-    if payload.type not in schemas.RESTAURANT_TYPES:
-        raise HTTPException(400, f"type must be one of {schemas.RESTAURANT_TYPES}")
+    if not payload.type or not payload.type.strip():
+        raise HTTPException(400, "請輸入餐廳類型")
     r = models.Restaurant(name=payload.name, phone=payload.phone, address=payload.address,
-                           type=payload.type, created_by=payload.created_by)
+                           map_url=payload.map_url, type=payload.type.strip(),
+                           created_by=payload.created_by)
     db.add(r)
     db.flush()
     for item in payload.menu_items:
@@ -82,10 +93,12 @@ def update_restaurant(restaurant_id: int, payload: schemas.RestaurantUpdate,
         r.phone = payload.phone
     if payload.address is not None:
         r.address = payload.address
+    if payload.map_url is not None:
+        r.map_url = payload.map_url
     if payload.type is not None:
-        if payload.type not in schemas.RESTAURANT_TYPES:
-            raise HTTPException(400, f"type must be one of {schemas.RESTAURANT_TYPES}")
-        r.type = payload.type
+        if not payload.type.strip():
+            raise HTTPException(400, "請輸入餐廳類型")
+        r.type = payload.type.strip()
     if payload.menu_items is not None:
         db.query(models.MenuItem).filter(models.MenuItem.restaurant_id == r.id).delete()
         db.flush()
@@ -100,6 +113,42 @@ def update_restaurant(restaurant_id: int, payload: schemas.RestaurantUpdate,
                                               extra_price=opt.extra_price))
     db.commit()
     return _restaurant_query(db).filter(models.Restaurant.id == r.id).first()
+
+
+@router.delete("/{restaurant_id}", status_code=204)
+def delete_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
+    """v0.7: 編輯餐廳資料 gets a delete button. Open to any logged-in user
+    (same as editing a restaurant), not admin-gated.
+
+    Blocked while there's a currently-open order or vote pointing at this
+    restaurant (ask the user to close/delete those first). Any leftover
+    closed/deleted Order rows referencing it are cleaned up here too --
+    their data already lives in OrderHistory as a plain-text snapshot, so
+    the Order row itself is disposable once the restaurant is gone."""
+    r = db.query(models.Restaurant).filter(models.Restaurant.id == restaurant_id).first()
+    if not r:
+        raise HTTPException(404, "Restaurant not found")
+
+    open_order = db.query(models.Order).filter(
+        models.Order.restaurant_id == restaurant_id, models.Order.status == "open").first()
+    if open_order:
+        raise HTTPException(400, "此餐廳目前有進行中的訂單,請先結單或刪除該訂單才能刪除餐廳")
+
+    open_vote = db.query(models.VoteBatchCandidate).join(
+        models.VoteBatch, models.VoteBatchCandidate.vote_batch_id == models.VoteBatch.id
+    ).filter(models.VoteBatchCandidate.restaurant_id == restaurant_id,
+             models.VoteBatch.status == "open").first()
+    if open_vote:
+        raise HTTPException(400, "此餐廳目前在進行中的投票裡,請先完成或刪除該投票才能刪除餐廳")
+
+    for stale_order in db.query(models.Order).filter(models.Order.restaurant_id == restaurant_id).all():
+        db.delete(stale_order)
+    db.query(models.VoteBatchCandidate).filter(
+        models.VoteBatchCandidate.restaurant_id == restaurant_id).delete()
+
+    db.delete(r)  # cascades to RestaurantPhoto + MenuItem (+ MenuItemOption)
+    db.commit()
+    return None
 
 
 @router.post("/{restaurant_id}/photos", response_model=schemas.PhotoOut)

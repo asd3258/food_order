@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, RESTAURANT_TYPES } from '../api'
 import { userStore } from '../stores/user'
@@ -19,10 +19,22 @@ interface ItemDraft {
 
 const router = useRouter()
 const name = ref('')
+const mapUrl = ref('')
 const phone = ref('')
 const address = ref('')
 const type = ref(RESTAURANT_TYPES[0])
+const customType = ref('') // v0.7: 餐廳類型 manual entry, overrides the dropdown when filled
+const types = ref<string[]>(RESTAURANT_TYPES)
 const items = ref<ItemDraft[]>([])
+
+async function loadTypes() {
+  try {
+    types.value = await api.listRestaurantTypes()
+  } catch {
+    // keep the static fallback if the backend isn't reachable yet
+  }
+}
+onMounted(loadTypes)
 
 function addItemRow() {
   items.value.push({ name: '', price: 0, optionGroups: [] })
@@ -57,11 +69,13 @@ async function submit() {
     toast('請輸入餐廳名稱')
     return
   }
+  const finalType = customType.value.trim() || type.value
   await api.createRestaurant({
     name: name.value,
     phone: phone.value,
     address: address.value,
-    type: type.value,
+    map_url: mapUrl.value,
+    type: finalType,
     created_by: userStore.username,
     menu_items: items.value.map((it) => ({
       name: it.name || '未命名品項',
@@ -95,13 +109,18 @@ async function submit() {
     <h2>餐廳資料(手動輸入)</h2>
     <div class="card">
       <div class="form-group"><label>餐廳名稱</label><input v-model="name" placeholder="例:日式烤肉飯 南崬" /></div>
+      <div class="form-group"><label>Google Map 連結</label><input v-model="mapUrl" placeholder="https://maps.app.goo.gl/..." /></div>
       <div class="form-group"><label>電話</label><input v-model="phone" placeholder="(03) 312-8111" /></div>
       <div class="form-group"><label>地址</label><input v-model="address" placeholder="桃園市蘆竹區..." /></div>
       <div class="form-group">
         <label>餐廳類型</label>
         <select v-model="type">
-          <option v-for="t in RESTAURANT_TYPES" :key="t" :value="t">{{ t }}</option>
+          <option v-for="t in types" :key="t" :value="t">{{ t }}</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label>或手動輸入新類型(填了會取代上面的選擇)</label>
+        <input v-model="customType" placeholder="例:火鍋" />
       </div>
     </div>
   </section>

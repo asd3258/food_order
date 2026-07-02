@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
 from app.database import get_db
+from app.permissions import require_admin
 
 router = APIRouter(prefix="/api/orders/history", tags=["history"])
 
@@ -34,3 +35,15 @@ def toggle_payment(history_id: int, user: str, acting_user: str, db: Session = D
     db.commit()
     db.refresh(payment)
     return payment
+
+
+@router.delete("/{history_id}", status_code=204)
+def delete_history(history_id: int, acting_user: str, db: Session = Depends(get_db)):
+    """v0.7: deleting a history entry is admin-only."""
+    require_admin(db, acting_user)
+    history = db.query(models.OrderHistory).filter(models.OrderHistory.id == history_id).first()
+    if not history:
+        raise HTTPException(404, "History entry not found")
+    db.delete(history)  # cascades to OrderHistoryLine/OrderHistoryPayment
+    db.commit()
+    return None

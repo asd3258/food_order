@@ -2,6 +2,8 @@
 import { onMounted, reactive, ref } from 'vue'
 import { api, type HistoryEntry } from '../api'
 import { userStore } from '../stores/user'
+import { confirmAction } from '../stores/confirm'
+import { toast } from '../stores/toast'
 
 const entries = ref<HistoryEntry[]>([])
 const expanded = reactive<Set<number>>(new Set())
@@ -19,6 +21,15 @@ function toggle(id: number) {
 async function togglePayment(entry: HistoryEntry, user: string) {
   if (entry.initiator !== userStore.username) return
   await api.togglePayment(entry.id, user, userStore.username)
+  load()
+}
+
+// v0.7: 歷史清單 delete is admin-only.
+async function removeEntry(entry: HistoryEntry) {
+  const ok = await confirmAction(`確定要刪除「${entry.restaurant_name}」(${entry.closed_date}) 這筆歷史紀錄嗎?此動作無法復原。`)
+  if (!ok) return
+  await api.deleteHistory(entry.id, userStore.username)
+  toast('已刪除歷史紀錄')
   load()
 }
 </script>
@@ -39,6 +50,7 @@ async function togglePayment(entry: HistoryEntry, user: string) {
           已收款 {{ h.payments.filter((p) => p.is_paid).length }}/{{ h.payments.length }}
         </div>
       </div>
+      <span v-if="userStore.isAdmin" style="color:var(--danger);font-size:12px;cursor:pointer;margin-right:8px;align-self:center;" @click.stop="removeEntry(h)">刪除</span>
       <div class="chevron">▾</div>
     </div>
     <div class="hc-detail">

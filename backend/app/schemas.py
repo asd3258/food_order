@@ -19,6 +19,7 @@ class UserOut(BaseModel):
     id: int
     name: str
     order_count: int = 0  # how many OrderHistoryLine rows mention this name -- powers 快速登入 ordering
+    is_admin: bool = False
 
 
 # ---------- Menu item options ----------
@@ -63,6 +64,7 @@ class RestaurantIn(BaseModel):
     name: str
     phone: str = ""
     address: str = ""
+    map_url: str = ""
     type: str
     created_by: str = ""
     menu_items: List[MenuItemIn] = []
@@ -72,6 +74,7 @@ class RestaurantUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
+    map_url: Optional[str] = None
     type: Optional[str] = None
     menu_items: Optional[List[MenuItemIn]] = None
 

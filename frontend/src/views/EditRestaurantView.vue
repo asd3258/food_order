@@ -24,12 +24,23 @@ const router = useRouter()
 const restaurantId = Number(route.params.id)
 
 const name = ref('')
+const mapUrl = ref('')
 const phone = ref('')
 const address = ref('')
 const type = ref(RESTAURANT_TYPES[0])
+const customType = ref('') // v0.7: 餐廳類型 manual entry, overrides the dropdown when filled
+const types = ref<string[]>(RESTAURANT_TYPES)
 const photos = ref<{ id?: number; image_url: string; caption: string; isNew?: boolean }[]>([])
 const items = ref<ItemDraft[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
+
+async function loadTypes() {
+  try {
+    types.value = await api.listRestaurantTypes()
+  } catch {
+    // keep the static fallback if the backend isn't reachable yet
+  }
+}
 
 const lightboxOpen = ref(false)
 const lightboxPhoto = ref<{ image_url: string; caption: string } | null>(null)
@@ -71,6 +82,7 @@ function parseChoices(text: string): { option_name: string; extra_price: number 
 async function load() {
   const r: RestaurantDetail = await api.getRestaurantMenu(restaurantId)
   name.value = r.name
+  mapUrl.value = r.map_url || ''
   phone.value = r.phone
   address.value = r.address
   type.value = r.type
@@ -78,6 +90,7 @@ async function load() {
   items.value = r.menu_items.map((m) => ({ id: m.id, name: m.name, price: m.price, optionGroups: groupsFromMenuItem(m) }))
 }
 onMounted(load)
+onMounted(loadTypes)
 
 function triggerUpload() {
   fileInput.value?.click()
@@ -120,11 +133,13 @@ function removeOptionGroup(i: number, gi: number) {
 
 async function save() {
   if (!requireLogin()) return
+  const finalType = customType.value.trim() || type.value
   await api.updateRestaurant(restaurantId, {
     name: name.value,
     phone: phone.value,
     address: address.value,
-    type: type.value,
+    map_url: mapUrl.value,
+    type: finalType,
     menu_items: items.value.map((it) => ({
       name: it.name,
       price: it.price,
@@ -150,6 +165,21 @@ async function save() {
 function cancel() {
   router.push(`/restaurants/${restaurantId}`)
 }
+
+async function removeRestaurant() {
+  if (!requireLogin()) return
+  const ok = await confirmAction(`確定要刪除「${name.value}」這間餐廳嗎?菜單/照片會一併刪除,此動作無法復原。`)
+  if (!ok) return
+  try {
+    await api.deleteRestaurant(restaurantId)
+  } catch {
+    // api.ts already toasts the backend's error detail (e.g. "此餐廳目前有
+    // 進行中的訂單...") -- nothing else to do here.
+    return
+  }
+  toast('已刪除餐廳:' + name.value)
+  router.push('/restaurants')
+}
 </script>
 
 <template>
@@ -162,13 +192,18 @@ function cancel() {
     <h2>餐廳資料</h2>
     <div class="card">
       <div class="form-group"><label>餐廳名稱</label><input v-model="name" /></div>
+      <div class="form-group"><label>Google Map 連結</label><input v-model="mapUrl" placeholder="https://maps.app.goo.gl/..." /></div>
       <div class="form-group"><label>電話</label><input v-model="phone" /></div>
       <div class="form-group"><label>地址</label><input v-model="address" /></div>
       <div class="form-group">
         <label>餐廳類型</label>
         <select v-model="type">
-          <option v-for="t in RESTAURANT_TYPES" :key="t" :value="t">{{ t }}</option>
+          <option v-for="t in types" :key="t" :value="t">{{ t }}</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label>或手動輸入新類型(填了會取代上面的選擇)</label>
+        <input v-model="customType" placeholder="例:火鍋" />
       </div>
     </div>
   </section>
@@ -245,4 +280,5 @@ function cancel() {
   </section>
 
   <button class="btn btn-primary btn-full" @click="save">儲存變更</button>
+  <button class="btn btn-danger btn-full" style="margin-top:10px;" @click="removeRestaurant">🗑️ 刪除餐廳</button>
 </template>

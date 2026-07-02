@@ -16,6 +16,13 @@ records created under their old name (e.g. "only the initiator can delete
 this order") will stop matching until the name is changed back. Acceptable
 tradeoff for a small team; would need a real foreign-key identity model to
 fix properly.
+
+v0.7: added `User.is_admin`. There is still no password -- whoever logs in
+as the roster entry named "admin_mike" (seeded with is_admin=True) gets
+admin rights (delete history entries, access 管理使用者). This matches the
+project's existing no-real-auth posture, but is worth flagging explicitly:
+anyone who knows/guesses that name can become admin. Ask if you want a PIN
+added to admin accounts.
 """
 import datetime as dt
 
@@ -35,6 +42,7 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    is_admin = Column(Boolean, default=False)  # v0.7: gates 管理使用者 + 刪除歷史訂單
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 

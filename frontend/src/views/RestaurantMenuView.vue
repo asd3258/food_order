@@ -39,6 +39,10 @@ function groupBy(options: OptionChoice[], withPrice = false): Record<string, str
 }
 
 function mapUrl(r: RestaurantDetail): string {
+  // v0.7: prefer the manually-entered Google Map 連結 (more accurate than a
+  // generated search query) -- fall back to an auto-generated search URL
+  // for restaurants that don't have one set yet.
+  if (r.map_url && r.map_url.trim()) return r.map_url.trim()
   return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(r.name + ' ' + r.address)
 }
 

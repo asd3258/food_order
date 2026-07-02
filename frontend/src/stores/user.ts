@@ -27,6 +27,7 @@ function consumeNameFromUrl(): string | null {
 export const userStore = reactive({
   userId: null as number | null,
   username: '',
+  isAdmin: false,
   get isLoggedIn(): boolean {
     return this.userId !== null
   },
@@ -47,6 +48,7 @@ export const userStore = reactive({
       const profile = await api.getUser(Number(stored))
       this.userId = profile.id
       this.username = profile.name
+      this.isAdmin = profile.is_admin
     } catch {
       // Deleted from the roster, or backend not reachable yet -- fall back
       // to logged-out rather than silently acting as a name that no longer
@@ -62,6 +64,7 @@ export const userStore = reactive({
     const profile = await api.loginOrCreateUser(name)
     this.userId = profile.id
     this.username = profile.name
+    this.isAdmin = profile.is_admin
     localStorage.setItem(STORAGE_KEY, String(profile.id))
     toast(`已登入:${profile.name}`)
   },
@@ -69,6 +72,7 @@ export const userStore = reactive({
   logout() {
     this.userId = null
     this.username = ''
+    this.isAdmin = false
     localStorage.removeItem(STORAGE_KEY)
   },
 })

@@ -9,6 +9,7 @@ import { requireLogin } from '../auth'
 
 const router = useRouter()
 const restaurants = ref<RestaurantSummary[]>([])
+const types = ref<string[]>(RESTAURANT_TYPES)
 const q = ref('')
 const activeType = ref<string | null>(null)
 const selected = ref<Set<number>>(new Set())
@@ -17,7 +18,15 @@ const deadline = ref<DeadlineParts>(defaultDeadline())
 async function load() {
   restaurants.value = await api.listRestaurants(q.value, activeType.value || undefined)
 }
+async function loadTypes() {
+  try {
+    types.value = await api.listRestaurantTypes()
+  } catch {
+    // keep the static fallback if the backend isn't reachable yet
+  }
+}
 onMounted(load)
+onMounted(loadTypes)
 watch(q, load)
 
 function toggleType(t: string) {
@@ -68,7 +77,7 @@ async function handleAction() {
     </div>
     <div class="type-filter-row">
       <span
-        v-for="t in RESTAURANT_TYPES"
+        v-for="t in types"
         :key="t"
         class="type-chip"
         :class="{ active: activeType === t }"

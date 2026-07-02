@@ -50,6 +50,7 @@ RESTAURANTS = [
 
 
 SEED_USERS = ["Mike Chen", "Tony Su", "Asa Wang", "Vincent Yu"]
+ADMIN_USERS = ["admin_mike"]  # v0.7: is_admin=True -- log in as this name to manage users / delete history
 
 
 def seed():
@@ -63,6 +64,8 @@ def seed():
 
         for name in SEED_USERS:
             db.add(models.User(name=name))
+        for name in ADMIN_USERS:
+            db.add(models.User(name=name, is_admin=True))
         db.commit()
 
         restaurant_objs = []

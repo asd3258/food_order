@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.database import get_db
+from app.permissions import require_admin
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -18,7 +19,8 @@ def _order_counts(db: Session) -> dict:
 
 
 def _to_out(u: models.User, counts: dict) -> schemas.UserOut:
-    return schemas.UserOut(id=u.id, name=u.name, order_count=counts.get(u.name, 0))
+    return schemas.UserOut(id=u.id, name=u.name, order_count=counts.get(u.name, 0),
+                            is_admin=bool(u.is_admin))
 
 
 @router.get("", response_model=list[schemas.UserOut])
@@ -58,7 +60,10 @@ def login_or_create(payload: schemas.UserCreateIn, db: Session = Depends(get_db)
 
 
 @router.patch("/{user_id}", response_model=schemas.UserOut)
-def rename_user(user_id: int, payload: schemas.UserRenameIn, db: Session = Depends(get_db)):
+def rename_user(user_id: int, payload: schemas.UserRenameIn, acting_user: str,
+                 db: Session = Depends(get_db)):
+    """v0.7: 管理使用者 is admin-only -- `acting_user` must be an is_admin roster entry."""
+    require_admin(db, acting_user)
     u = db.query(models.User).filter(models.User.id == user_id).first()
     if not u:
         raise HTTPException(404, "User not found")
@@ -72,10 +77,11 @@ def rename_user(user_id: int, payload: schemas.UserRenameIn, db: Session = Depen
 
 
 @router.delete("/{user_id}", status_code=204)
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(user_id: int, acting_user: str, db: Session = Depends(get_db)):
     """Removes this person from the roster/quick-login list only -- does NOT
     touch any orders/votes/history they're mentioned in (those store the name
-    as a plain string snapshot, see the note in models.py)."""
+    as a plain string snapshot, see the note in models.py). Admin-only (v0.7)."""
+    require_admin(db, acting_user)
     u = db.query(models.User).filter(models.User.id == user_id).first()
     if not u:
         raise HTTPException(404, "User not found")
