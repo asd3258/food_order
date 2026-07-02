@@ -5,6 +5,7 @@ import { api, RESTAURANT_TYPES } from '../api'
 import { userStore } from '../stores/user'
 import { toast } from '../stores/toast'
 import { requireLogin } from '../auth'
+import { optionsToGroups } from '../menuDraft'
 
 interface OptionGroupDraft {
   group: string // e.g. "口味" / "加購"
@@ -26,6 +27,8 @@ const type = ref(RESTAURANT_TYPES[0])
 const customType = ref('') // v0.7: 餐廳類型 manual entry, overrides the dropdown when filled
 const types = ref<string[]>(RESTAURANT_TYPES)
 const items = ref<ItemDraft[]>([])
+const parsingMenu = ref(false)
+const menuFileInput = ref<HTMLInputElement | null>(null)
 
 async function loadTypes() {
   try {
@@ -35,6 +38,39 @@ async function loadTypes() {
   }
 }
 onMounted(loadTypes)
+
+// v0.9: AI 菜單解析 -- upload a menu photo, backend asks Gemini/ChatGPT to
+// extract items, we append the drafts to the editable 品項清單 below for the
+// user to review/fix (never auto-saves anything by itself).
+function triggerMenuUpload() {
+  menuFileInput.value?.click()
+}
+function handleMenuPhoto(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = async () => {
+    parsingMenu.value = true
+    try {
+      const parsed = await api.parseMenuPhoto(String(reader.result))
+      if (!parsed.length) {
+        toast('AI 沒有從照片中辨識出品項,請確認照片清晰或改用手動輸入')
+      } else {
+        for (const it of parsed) {
+          items.value.push({ name: it.name, price: it.price, optionGroups: optionsToGroups(it.options) })
+        }
+        toast(`AI 已辨識出 ${parsed.length} 個品項,請檢查並修正後再建立餐廳`)
+      }
+    } catch {
+      // api.ts already toasted the backend's error detail (缺金鑰/兩個服務都失敗等)
+    } finally {
+      parsingMenu.value = false
+    }
+  }
+  reader.readAsDataURL(file)
+  input.value = ''
+}
 
 function addItemRow() {
   items.value.push({ name: '', price: 0, optionGroups: [] })
@@ -101,7 +137,13 @@ async function submit() {
     <h1>建立新餐廳</h1>
   </div>
 
-  <div class="disabled-feature"><span>📷 上傳菜單照片,AI 自動解析品項</span><span class="tag-phase">Phase 2</span></div>
+  <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+    <span style="font-size:13px;">📷 上傳菜單照片,AI 自動解析品項</span>
+    <button class="btn btn-secondary" :disabled="parsingMenu" @click="triggerMenuUpload">
+      {{ parsingMenu ? 'AI 辨識中...' : '上傳照片' }}
+    </button>
+  </div>
+  <input ref="menuFileInput" type="file" accept="image/*" style="display:none;" @change="handleMenuPhoto" />
   <div class="disabled-feature"><span>🗺️ 貼上 Google Maps 網址,AI 自動生成菜單</span><span class="tag-phase">Phase 3</span></div>
   <div class="disabled-feature"><span>🔗 串接 Uber Eats / foodpanda 生成菜單</span><span class="tag-phase">評估中</span></div>
 

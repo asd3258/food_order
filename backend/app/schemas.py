@@ -99,6 +99,10 @@ class PhotoUploadIn(BaseModel):
     caption: str = ""
 
 
+class MenuParseIn(BaseModel):
+    image_url: str  # data URL of a menu photo, same shape as PhotoUploadIn
+
+
 # ---------- Deadline helper ----------
 class DeadlineIn(BaseModel):
     deadline_at: dt.datetime

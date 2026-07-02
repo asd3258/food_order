@@ -77,6 +77,11 @@ export interface RestaurantDetail extends RestaurantSummary {
   menu_items: MenuItem[]
   photos: Photo[]
 }
+export interface AiMenuItemDraft {
+  name: string
+  price: number
+  options: OptionChoice[]
+}
 export interface OrderItemRow {
   id: number
   user: string
@@ -172,6 +177,12 @@ export const api = {
     method: 'PUT', body: JSON.stringify(payload),
   }),
   deleteRestaurant: (id: number) => request<void>(`/api/restaurants/${id}`, { method: 'DELETE' }),
+  // v0.9: AI 菜單解析 -- send a photo (data URL), get back draft items to
+  // review/edit before actually creating the restaurant. Gemini-first,
+  // OpenAI-fallback happens entirely on the backend.
+  parseMenuPhoto: (imageUrl: string) => request<AiMenuItemDraft[]>('/api/restaurants/parse-menu', {
+    method: 'POST', body: JSON.stringify({ image_url: imageUrl }),
+  }),
   uploadPhoto: (id: number, imageUrl: string, caption = '') => request<Photo>(
     `/api/restaurants/${id}/photos`, { method: 'POST', body: JSON.stringify({ image_url: imageUrl, caption }) }),
   deletePhoto: (id: number, photoId: number) => request<void>(

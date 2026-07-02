@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
 from app.database import get_db
+from app.ai_menu import parse_menu_photo, MenuParseError
 
 router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
 
@@ -149,6 +150,19 @@ def delete_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
     db.delete(r)  # cascades to RestaurantPhoto + MenuItem (+ MenuItemOption)
     db.commit()
     return None
+
+
+@router.post("/parse-menu", response_model=list[schemas.MenuItemIn])
+def parse_menu(payload: schemas.MenuParseIn):
+    """v0.9: AI-assisted 品項 extraction from a photo of a menu -- see
+    app/ai_menu.py for the Gemini-first/OpenAI-fallback logic. Returns
+    unsaved draft items (no restaurant_id involved yet) for the frontend to
+    drop into the editable 品項清單 for a human to review/fix before the
+    restaurant is actually created or saved."""
+    try:
+        return parse_menu_photo(payload.image_url)
+    except MenuParseError as exc:
+        raise HTTPException(400, str(exc))
 
 
 @router.post("/{restaurant_id}/photos", response_model=schemas.PhotoOut)

@@ -6,6 +6,7 @@ import { confirmAction } from '../stores/confirm'
 import { toast } from '../stores/toast'
 import ImageLightbox from '../components/ImageLightbox.vue'
 import { requireLogin } from '../auth'
+import { optionsToGroups } from '../menuDraft'
 
 interface OptionGroupDraft {
   group: string
@@ -53,19 +54,10 @@ function closeLightbox() {
 }
 
 // Turn the flat MenuItemOption[] the backend returns back into editable
-// group rows -- inverse of parseChoices() below. Groups are kept in the
-// order their first option appeared.
+// group rows -- inverse of parseChoices() below. Shared with the AI
+// menu-parser draft items via menuDraft.ts's optionsToGroups().
 function groupsFromMenuItem(m: MenuItem): OptionGroupDraft[] {
-  const order: string[] = []
-  const byGroup: Record<string, { type: 'radio' | 'checkbox'; choices: string[] }> = {}
-  for (const o of m.options) {
-    if (!byGroup[o.option_group]) {
-      byGroup[o.option_group] = { type: o.option_type as 'radio' | 'checkbox', choices: [] }
-      order.push(o.option_group)
-    }
-    byGroup[o.option_group].choices.push(o.extra_price ? `${o.option_name}+${o.extra_price}` : o.option_name)
-  }
-  return order.map((group) => ({ group, type: byGroup[group].type, choicesText: byGroup[group].choices.join(',') }))
+  return optionsToGroups(m.options)
 }
 function parseChoices(text: string): { option_name: string; extra_price: number }[] {
   return text
