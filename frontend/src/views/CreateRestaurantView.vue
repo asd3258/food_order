@@ -5,6 +5,7 @@ import { api, RESTAURANT_TYPES } from '../api'
 import { userStore } from '../stores/user'
 import { toast } from '../stores/toast'
 import { requireLogin } from '../auth'
+import { optionsToGroups } from '../menuDraft'
 
 interface OptionGroupDraft {
   group: string // e.g. "口味" / "加購"
@@ -28,11 +29,9 @@ const type = ref(RESTAURANT_TYPES[0])
 const customType = ref('') // v0.7: 餐廳類型 manual entry, overrides the dropdown when filled
 const types = ref<string[]>(RESTAURANT_TYPES)
 const items = ref<ItemDraft[]>([])
-
 const parsingMenu = ref(false)
 const fetchingPlace = ref(false)
 const menuFileInput = ref<HTMLInputElement | null>(null)
-
 
 async function loadTypes() {
   try {
@@ -167,10 +166,6 @@ async function submit() {
     <router-link class="back" to="/more">←</router-link>
     <h1>建立新餐廳</h1>
   </div>
-
-  <div class="disabled-feature"><span>📷 上傳菜單照片,AI 自動解析品項</span><span class="tag-phase">Phase 2</span></div>
-  <div class="disabled-feature"><span>🗺️ 貼上 Google Maps 網址,AI 自動生成菜單</span><span class="tag-phase">Phase 3</span></div>
-  <div class="disabled-feature"><span>🔗 串接 Uber Eats / foodpanda 生成菜單</span><span class="tag-phase">評估中</span></div>
 
   <section class="block">
     <h2>AI 自動生成菜單</h2>

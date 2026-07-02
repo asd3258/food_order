@@ -32,7 +32,6 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://food_order:food_order@food_order_db:5432/food_order
       CORS_ORIGINS: http://localhost:5173,http://mike1-virtual-machine:55173,http://192.168.138.68:55173
-
       # v0.9: AI 菜單解析 -- read from a .env file next to this docker-compose.yml
       # (see .env.example). The ${VAR:-} form means this is safe even if .env
       # doesn't exist yet or doesn't define these -- it just falls back to an
@@ -45,7 +44,6 @@ services:
       # v0.10: Google Places API (New) -- separate Google product/project
       # from Gemini, needs its own key. See .env.example / README.md.
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
-
     ports:
       - "58000:8000"
     command: >

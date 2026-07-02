@@ -6,11 +6,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
 from app.database import get_db
-<<<<<<< Updated upstream
-=======
 from app.ai_menu import parse_menu_photo, classify_menu_categories, MenuParseError
 from app.places import fetch_place_info, PlacesError
->>>>>>> Stashed changes
 
 router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
 
@@ -158,8 +155,6 @@ def delete_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
     return None
 
 
-<<<<<<< Updated upstream
-=======
 @router.post("/parse-menu", response_model=list[schemas.MenuItemIn])
 def parse_menu(payload: schemas.MenuParseIn):
     """v0.9: AI-assisted 品項 extraction from a photo of a menu -- see
@@ -201,7 +196,6 @@ def classify_categories(payload: schemas.ClassifyCategoriesIn, db: Session = Dep
         raise HTTPException(400, str(exc))
 
 
->>>>>>> Stashed changes
 @router.post("/{restaurant_id}/photos", response_model=schemas.PhotoOut)
 def upload_photo(restaurant_id: int, payload: schemas.PhotoUploadIn, db: Session = Depends(get_db)):
     r = db.query(models.Restaurant).filter(models.Restaurant.id == restaurant_id).first()
