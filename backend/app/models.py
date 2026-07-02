@@ -54,6 +54,7 @@ class Restaurant(Base):
     phone = Column(String, default="")
     address = Column(String, default="")
     map_url = Column(String, default="")
+    hours = Column(Text, default="")  # v0.10: 營業時間, free-text (textarea), e.g. from Google Places or typed by hand
     type = Column(String, nullable=False, default="便當")  # 便當/飲料/牛排/義大利麵
     created_by = Column(String, default="")
     created_at = Column(DateTime, default=utcnow)
@@ -83,7 +84,7 @@ class MenuItem(Base):
     name = Column(String, nullable=False)
     price = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, default=True)
-    # NOTE: v0.5 removed the `category` column per spec — menus are flat lists.
+    category = Column(String, default="")  # v0.10: brought back -- see 分類 grouping on the menu view
 
     restaurant = relationship("Restaurant", back_populates="menu_items")
     options = relationship("MenuItemOption", back_populates="menu_item",

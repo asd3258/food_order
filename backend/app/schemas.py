@@ -39,6 +39,7 @@ class OptionChoiceOut(OptionChoiceIn):
 class MenuItemIn(BaseModel):
     name: str
     price: int
+    category: str = ""  # v0.10: brought back -- see 分類 grouping on the menu view
     options: List[OptionChoiceIn] = []
 
 
@@ -47,6 +48,7 @@ class MenuItemOut(BaseModel):
     id: int
     name: str
     price: int
+    category: str = ""
     options: List[OptionChoiceOut] = []
 
 
@@ -65,6 +67,7 @@ class RestaurantIn(BaseModel):
     phone: str = ""
     address: str = ""
     map_url: str = ""
+    hours: str = ""  # v0.10: 營業時間 (textarea, free text)
     type: str
     created_by: str = ""
     menu_items: List[MenuItemIn] = []
@@ -75,6 +78,7 @@ class RestaurantUpdate(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     map_url: Optional[str] = None
+    hours: Optional[str] = None
     type: Optional[str] = None
     menu_items: Optional[List[MenuItemIn]] = None
 
@@ -90,6 +94,7 @@ class RestaurantSummaryOut(BaseModel):
 
 class RestaurantDetailOut(RestaurantSummaryOut):
     map_url: str
+    hours: str = ""
     menu_items: List[MenuItemOut] = []
     photos: List[PhotoOut] = []
 
@@ -97,6 +102,31 @@ class RestaurantDetailOut(RestaurantSummaryOut):
 class PhotoUploadIn(BaseModel):
     image_url: str  # data URL from the client (FileReader)
     caption: str = ""
+
+
+class MenuParseIn(BaseModel):
+    image_url: str  # data URL of a menu photo, same shape as PhotoUploadIn
+
+
+# ---------- v0.10: Google Places lookup ----------
+class PlaceInfoIn(BaseModel):
+    map_url: str
+
+
+class PlaceInfoOut(BaseModel):
+    phone: str = ""
+    address: str = ""
+    hours: str = ""
+
+
+# ---------- v0.10: AI 品項分類 ----------
+class ClassifyCategoriesIn(BaseModel):
+    item_names: List[str]
+
+
+class CategorySuggestionOut(BaseModel):
+    name: str
+    category: str
 
 
 # ---------- Deadline helper ----------

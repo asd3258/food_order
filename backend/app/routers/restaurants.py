@@ -6,6 +6,11 @@ from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
 from app.database import get_db
+<<<<<<< Updated upstream
+=======
+from app.ai_menu import parse_menu_photo, classify_menu_categories, MenuParseError
+from app.places import fetch_place_info, PlacesError
+>>>>>>> Stashed changes
 
 router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
 
@@ -65,12 +70,12 @@ def create_restaurant(payload: schemas.RestaurantIn, db: Session = Depends(get_d
     if not payload.type or not payload.type.strip():
         raise HTTPException(400, "請輸入餐廳類型")
     r = models.Restaurant(name=payload.name, phone=payload.phone, address=payload.address,
-                           map_url=payload.map_url, type=payload.type.strip(),
+                           map_url=payload.map_url, hours=payload.hours, type=payload.type.strip(),
                            created_by=payload.created_by)
     db.add(r)
     db.flush()
     for item in payload.menu_items:
-        mi = models.MenuItem(restaurant_id=r.id, name=item.name, price=item.price)
+        mi = models.MenuItem(restaurant_id=r.id, name=item.name, price=item.price, category=item.category)
         db.add(mi)
         db.flush()
         for opt in item.options:
@@ -95,6 +100,8 @@ def update_restaurant(restaurant_id: int, payload: schemas.RestaurantUpdate,
         r.address = payload.address
     if payload.map_url is not None:
         r.map_url = payload.map_url
+    if payload.hours is not None:
+        r.hours = payload.hours
     if payload.type is not None:
         if not payload.type.strip():
             raise HTTPException(400, "請輸入餐廳類型")
@@ -103,7 +110,7 @@ def update_restaurant(restaurant_id: int, payload: schemas.RestaurantUpdate,
         db.query(models.MenuItem).filter(models.MenuItem.restaurant_id == r.id).delete()
         db.flush()
         for item in payload.menu_items:
-            mi = models.MenuItem(restaurant_id=r.id, name=item.name, price=item.price)
+            mi = models.MenuItem(restaurant_id=r.id, name=item.name, price=item.price, category=item.category)
             db.add(mi)
             db.flush()
             for opt in item.options:
@@ -151,6 +158,50 @@ def delete_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
     return None
 
 
+<<<<<<< Updated upstream
+=======
+@router.post("/parse-menu", response_model=list[schemas.MenuItemIn])
+def parse_menu(payload: schemas.MenuParseIn):
+    """v0.9: AI-assisted 品項 extraction from a photo of a menu -- see
+    app/ai_menu.py for the Gemini-first/OpenAI-fallback logic. Returns
+    unsaved draft items (no restaurant_id involved yet) for the frontend to
+    drop into the editable 品項清單 for a human to review/fix before the
+    restaurant is actually created or saved."""
+    try:
+        return parse_menu_photo(payload.image_url)
+    except MenuParseError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.post("/fetch-place-info", response_model=schemas.PlaceInfoOut)
+def fetch_place_info_endpoint(payload: schemas.PlaceInfoIn):
+    """v0.10: reads phone/address/營業時間 off a Google Maps listing via the
+    Places API (New) -- see app/places.py. Does NOT touch menu photos (see
+    that module's docstring for why)."""
+    try:
+        return fetch_place_info(payload.map_url)
+    except PlacesError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.post("/classify-categories", response_model=list[schemas.CategorySuggestionOut])
+def classify_categories(payload: schemas.ClassifyCategoriesIn, db: Session = Depends(get_db)):
+    """v0.10: "AI自動分類品項類型" on EditRestaurantView -- suggests a 分類 for
+    each of the currently-edited item names, using every other
+    already-categorized (name, category) pair in the DB as reference so
+    category naming stays consistent across restaurants. Returns
+    suggestions only; nothing is written here -- the frontend applies them
+    to its in-memory draft, and the real write happens on the existing
+    儲存變更 save."""
+    reference = db.query(models.MenuItem.name, models.MenuItem.category).filter(
+        models.MenuItem.category.isnot(None), models.MenuItem.category != "").distinct().limit(500).all()
+    try:
+        return classify_menu_categories(payload.item_names, [(n, c) for n, c in reference])
+    except MenuParseError as exc:
+        raise HTTPException(400, str(exc))
+
+
+>>>>>>> Stashed changes
 @router.post("/{restaurant_id}/photos", response_model=schemas.PhotoOut)
 def upload_photo(restaurant_id: int, payload: schemas.PhotoUploadIn, db: Session = Depends(get_db)):
     r = db.query(models.Restaurant).filter(models.Restaurant.id == restaurant_id).first()

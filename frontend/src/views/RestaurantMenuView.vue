@@ -1,13 +1,34 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api, type RestaurantDetail, type OptionChoice, type Photo } from '../api'
+import { api, type RestaurantDetail, type MenuItem, type OptionChoice, type Photo } from '../api'
 import ImageLightbox from '../components/ImageLightbox.vue'
 
 const route = useRoute()
 const router = useRouter()
 const restaurant = ref<RestaurantDetail | null>(null)
 const trackRef = ref<HTMLElement | null>(null)
+
+// v0.10: 分類 grouping is back -- group items by category, keeping the
+// order each category first appears in, with uncategorized items lumped
+// under 未分類 at the end.
+const groupedMenu = computed(() => {
+  const items = restaurant.value?.menu_items || []
+  const order: string[] = []
+  const groups: Record<string, MenuItem[]> = {}
+  for (const m of items) {
+    const cat = m.category?.trim() || '未分類'
+    if (!groups[cat]) {
+      groups[cat] = []
+      if (cat === '未分類') order.push(cat)
+      else order.unshift(cat)
+    }
+    groups[cat].push(m)
+  }
+  // keep 未分類 last regardless of insertion order above
+  const sorted = order.filter((c) => c !== '未分類').concat(order.includes('未分類') ? ['未分類'] : [])
+  return sorted.map((category) => ({ category, items: groups[category] }))
+})
 
 const lightboxOpen = ref(false)
 const lightboxPhoto = ref<Photo | null>(null)
@@ -71,15 +92,20 @@ function goEdit() {
   <button class="btn btn-secondary btn-full" style="margin-bottom:14px;" @click="goEdit">✏️ 編輯餐廳資料</button>
 
   <template v-if="restaurant">
-    <table class="stat-table" v-if="restaurant.menu_items.length">
-      <tr><th>品項名稱</th><th>口味</th><th>加購</th><th>金額</th></tr>
-      <tr v-for="m in restaurant.menu_items" :key="m.id">
-        <td>{{ m.name }}</td>
-        <td>{{ flavorStr(m.options) }}</td>
-        <td>{{ addonStr(m.options) }}</td>
-        <td>${{ m.price }}</td>
-      </tr>
-    </table>
+    <template v-if="restaurant.menu_items.length">
+      <div v-for="grp in groupedMenu" :key="grp.category">
+        <div class="menu-cat" style="margin-top:14px;font-size:12px;color:var(--muted);font-weight:600;">{{ grp.category }}</div>
+        <table class="stat-table">
+          <tr><th>品項名稱</th><th>口味</th><th>加購</th><th>金額</th></tr>
+          <tr v-for="m in grp.items" :key="m.id">
+            <td>{{ m.name }}</td>
+            <td>{{ flavorStr(m.options) }}</td>
+            <td>{{ addonStr(m.options) }}</td>
+            <td>${{ m.price }}</td>
+          </tr>
+        </table>
+      </div>
+    </template>
     <div v-else class="empty">此餐廳尚未建立菜單</div>
 
     <div class="menu-cat" style="margin-top:16px;font-size:12px;color:var(--muted);font-weight:600;">餐廳照片</div>
@@ -111,6 +137,7 @@ function goEdit() {
       <div class="info-row"><span class="lbl">類型</span><span>{{ restaurant.type }}</span></div>
       <div class="info-row"><span class="lbl">地址</span><span>{{ restaurant.address }}</span></div>
       <div class="info-row"><span class="lbl">電話</span><span>{{ restaurant.phone }}</span></div>
+      <div class="info-row" v-if="restaurant.hours"><span class="lbl">營業時間</span><span style="white-space:pre-line;">{{ restaurant.hours }}</span></div>
     </div>
     <a class="btn btn-secondary btn-full" :href="mapUrl(restaurant)" target="_blank">📍 在 Google Maps 開啟</a>
   </template>

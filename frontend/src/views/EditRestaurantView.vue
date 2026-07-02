@@ -16,6 +16,7 @@ interface ItemDraft {
   id?: number
   name: string
   price: number
+  category: string
   optionGroups: OptionGroupDraft[]
 }
 
@@ -27,12 +28,15 @@ const name = ref('')
 const mapUrl = ref('')
 const phone = ref('')
 const address = ref('')
+const hours = ref('')
 const type = ref(RESTAURANT_TYPES[0])
 const customType = ref('') // v0.7: 餐廳類型 manual entry, overrides the dropdown when filled
 const types = ref<string[]>(RESTAURANT_TYPES)
 const photos = ref<{ id?: number; image_url: string; caption: string; isNew?: boolean }[]>([])
 const items = ref<ItemDraft[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
+const fetchingPlace = ref(false)
+const classifying = ref(false)
 
 async function loadTypes() {
   try {
@@ -85,12 +89,35 @@ async function load() {
   mapUrl.value = r.map_url || ''
   phone.value = r.phone
   address.value = r.address
+  hours.value = r.hours || ''
   type.value = r.type
   photos.value = r.photos.map((p) => ({ id: p.id, image_url: p.image_url, caption: p.caption }))
-  items.value = r.menu_items.map((m) => ({ id: m.id, name: m.name, price: m.price, optionGroups: groupsFromMenuItem(m) }))
+  items.value = r.menu_items.map((m) => ({ id: m.id, name: m.name, price: m.price, category: m.category || '', optionGroups: groupsFromMenuItem(m) }))
 }
 onMounted(load)
 onMounted(loadTypes)
+
+// v0.10: Google Places lookup -- reuses whatever's already in the Google
+// Map 連結 field above (same field the restaurant detail page links out
+// to), doesn't touch menu items -- see CreateRestaurantView's note on why.
+async function fetchPlaceInfo() {
+  if (!mapUrl.value.trim()) {
+    toast('請先輸入 Google Map 連結')
+    return
+  }
+  fetchingPlace.value = true
+  try {
+    const info = await api.fetchPlaceInfo(mapUrl.value.trim())
+    if (info.phone) phone.value = info.phone
+    if (info.address) address.value = info.address
+    if (info.hours) hours.value = info.hours
+    toast('已從 Google Map 讀取電話/地址/營業時間,請檢查後再儲存')
+  } catch {
+    // api.ts already toasted the backend's error detail
+  } finally {
+    fetchingPlace.value = false
+  }
+}
 
 function triggerUpload() {
   fileInput.value?.click()
@@ -119,7 +146,7 @@ async function removePhoto(index: number) {
 }
 
 function addItemRow() {
-  items.value.push({ name: '', price: 0, optionGroups: [] })
+  items.value.push({ name: '', price: 0, category: '', optionGroups: [] })
 }
 function removeItemRow(index: number) {
   items.value.splice(index, 1)
@@ -131,6 +158,46 @@ function removeOptionGroup(i: number, gi: number) {
   items.value[i].optionGroups.splice(gi, 1)
 }
 
+// v0.10: "AI 自動分類品項類型" -- asks the backend for a 分類 suggestion per
+// item (using every other already-categorized item in the DB as
+// reference), shows a before/after diff, and only applies it to this
+// in-memory draft if the user confirms Yes. Nothing is written to the
+// database here -- that still only happens when 儲存變更 is pressed.
+async function classifyCategories() {
+  const names = items.value.map((it) => it.name.trim()).filter(Boolean)
+  if (!names.length) {
+    toast('目前沒有品項可以分類')
+    return
+  }
+  classifying.value = true
+  try {
+    const suggestions = await api.classifyCategories(names)
+    const byName = new Map(suggestions.map((s) => [s.name, s.category]))
+    const changes: string[] = []
+    for (const it of items.value) {
+      const suggested = byName.get(it.name.trim())
+      if (suggested && suggested !== (it.category || '')) {
+        changes.push(`${it.name}:「${it.category || '未分類'}」→「${suggested}」`)
+      }
+    }
+    if (!changes.length) {
+      toast('AI 認為目前分類已經沒問題,不需要修改')
+      return
+    }
+    const ok = await confirmAction(`AI 建議以下分類調整:\n\n${changes.join('\n')}\n\n套用到目前編輯的品項清單?(按「儲存變更」後才會真的存檔)`)
+    if (!ok) return
+    for (const it of items.value) {
+      const suggested = byName.get(it.name.trim())
+      if (suggested) it.category = suggested
+    }
+    toast('已套用分類建議,記得按「儲存變更」')
+  } catch {
+    // api.ts already toasted the backend's error detail
+  } finally {
+    classifying.value = false
+  }
+}
+
 async function save() {
   if (!requireLogin()) return
   const finalType = customType.value.trim() || type.value
@@ -139,10 +206,12 @@ async function save() {
     phone: phone.value,
     address: address.value,
     map_url: mapUrl.value,
+    hours: hours.value,
     type: finalType,
     menu_items: items.value.map((it) => ({
       name: it.name,
       price: it.price,
+      category: it.category || '',
       options: it.optionGroups.flatMap((g) =>
         parseChoices(g.choicesText).map((c) => ({
           option_group: g.group || '選項',
@@ -193,8 +262,15 @@ async function removeRestaurant() {
     <div class="card">
       <div class="form-group"><label>餐廳名稱</label><input v-model="name" /></div>
       <div class="form-group"><label>Google Map 連結</label><input v-model="mapUrl" placeholder="https://maps.app.goo.gl/..." /></div>
+      <button class="btn btn-secondary btn-full" style="margin-bottom:12px;" :disabled="fetchingPlace || !mapUrl.trim()" @click="fetchPlaceInfo">
+        {{ fetchingPlace ? '讀取中...' : '📍 從 Google Map 讀取電話/地址/營業時間' }}
+      </button>
       <div class="form-group"><label>電話</label><input v-model="phone" /></div>
       <div class="form-group"><label>地址</label><input v-model="address" /></div>
+      <div class="form-group">
+        <label>營業時間</label>
+        <textarea v-model="hours" rows="4" placeholder="例:&#10;星期一至五 11:00–14:00, 17:00–20:30&#10;星期六日 公休"></textarea>
+      </div>
       <div class="form-group">
         <label>餐廳類型</label>
         <select v-model="type">
@@ -237,6 +313,9 @@ async function removeRestaurant() {
       品項清單
       <span style="color:var(--brand);font-weight:600;cursor:pointer;" @click="addItemRow">+ 新增品項</span>
     </h2>
+    <button class="btn btn-secondary btn-full" style="margin-bottom:10px;" :disabled="classifying" @click="classifyCategories">
+      {{ classifying ? 'AI 分類中...' : '🏷️ AI 自動分類品項類型' }}
+    </button>
     <div v-if="!items.length" class="empty">尚未新增品項</div>
     <div v-for="(it, i) in items" :key="it.id ?? 'new-' + i" class="item-row">
       <div class="item-row-head">
@@ -244,6 +323,7 @@ async function removeRestaurant() {
         <span class="rm" @click="removeItemRow(i)">刪除</span>
       </div>
       <div class="form-group"><label>名稱</label><input v-model="it.name" /></div>
+      <div class="form-group"><label>分類</label><input v-model="it.category" placeholder="例:主餐/飲料/小菜" /></div>
       <div class="form-group"><label>價格</label><input v-model.number="it.price" type="number" /></div>
 
       <div style="margin-top:8px;">

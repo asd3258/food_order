@@ -14,6 +14,7 @@ interface OptionGroupDraft {
 interface ItemDraft {
   name: string
   price: number
+  category: string
   optionGroups: OptionGroupDraft[]
 }
 
@@ -22,10 +23,16 @@ const name = ref('')
 const mapUrl = ref('')
 const phone = ref('')
 const address = ref('')
+const hours = ref('')
 const type = ref(RESTAURANT_TYPES[0])
 const customType = ref('') // v0.7: 餐廳類型 manual entry, overrides the dropdown when filled
 const types = ref<string[]>(RESTAURANT_TYPES)
 const items = ref<ItemDraft[]>([])
+
+const parsingMenu = ref(false)
+const fetchingPlace = ref(false)
+const menuFileInput = ref<HTMLInputElement | null>(null)
+
 
 async function loadTypes() {
   try {
@@ -36,8 +43,66 @@ async function loadTypes() {
 }
 onMounted(loadTypes)
 
+// v0.10: "AI 自動生成菜單" -- merges what used to be two separate disabled
+// placeholders (上傳菜單照片 AI 解析品項 / 貼上 Google Maps 網址 AI 生成菜單)
+// into one section with two independent triggers:
+//   1. 上傳照片 -> vision AI extracts 品項清單 (v0.9, unchanged)
+//   2. 讀取店家資訊 -> Google Places API fills 電話/地址/營業時間 from the
+//      Google Map 連結 above (v0.10). Does NOT touch menu items -- Google's
+//      official API has no way to fetch "the menu photos" reliably (see
+//      app/places.py's docstring), so that direction only works via manual
+//      photo upload.
+function triggerMenuUpload() {
+  menuFileInput.value?.click()
+}
+function handleMenuPhoto(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = async () => {
+    parsingMenu.value = true
+    try {
+      const parsed = await api.parseMenuPhoto(String(reader.result))
+      if (!parsed.length) {
+        toast('AI 沒有從照片中辨識出品項,請確認照片清晰或改用手動輸入')
+      } else {
+        for (const it of parsed) {
+          items.value.push({ name: it.name, price: it.price, category: '', optionGroups: optionsToGroups(it.options) })
+        }
+        toast(`AI 已辨識出 ${parsed.length} 個品項,請檢查並修正後再建立餐廳`)
+      }
+    } catch {
+      // api.ts already toasted the backend's error detail (缺金鑰/兩個服務都失敗等)
+    } finally {
+      parsingMenu.value = false
+    }
+  }
+  reader.readAsDataURL(file)
+  input.value = ''
+}
+
+async function fetchPlaceInfo() {
+  if (!mapUrl.value.trim()) {
+    toast('請先輸入 Google Map 連結')
+    return
+  }
+  fetchingPlace.value = true
+  try {
+    const info = await api.fetchPlaceInfo(mapUrl.value.trim())
+    if (info.phone) phone.value = info.phone
+    if (info.address) address.value = info.address
+    if (info.hours) hours.value = info.hours
+    toast('已從 Google Map 讀取電話/地址/營業時間,請檢查後再建立餐廳')
+  } catch {
+    // api.ts already toasted the backend's error detail (缺金鑰/找不到地點等)
+  } finally {
+    fetchingPlace.value = false
+  }
+}
+
 function addItemRow() {
-  items.value.push({ name: '', price: 0, optionGroups: [] })
+  items.value.push({ name: '', price: 0, category: '', optionGroups: [] })
 }
 function removeItemRow(i: number) {
   items.value.splice(i, 1)
@@ -75,11 +140,13 @@ async function submit() {
     phone: phone.value,
     address: address.value,
     map_url: mapUrl.value,
+    hours: hours.value,
     type: finalType,
     created_by: userStore.username,
     menu_items: items.value.map((it) => ({
       name: it.name || '未命名品項',
       price: it.price || 0,
+      category: it.category || '',
       options: it.optionGroups.flatMap((g) =>
         parseChoices(g.choicesText).map((c) => ({
           option_group: g.group || '選項',
@@ -106,12 +173,35 @@ async function submit() {
   <div class="disabled-feature"><span>🔗 串接 Uber Eats / foodpanda 生成菜單</span><span class="tag-phase">評估中</span></div>
 
   <section class="block">
+    <h2>AI 自動生成菜單</h2>
+    <div class="card">
+      <div class="form-group">
+        <label>Google Map 連結</label>
+        <input v-model="mapUrl" placeholder="https://maps.app.goo.gl/..." />
+      </div>
+      <button class="btn btn-secondary btn-full" :disabled="fetchingPlace || !mapUrl.trim()" @click="fetchPlaceInfo">
+        {{ fetchingPlace ? '讀取中...' : '📍 從 Google Map 讀取電話/地址/營業時間' }}
+      </button>
+    </div>
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <span style="font-size:13px;">📷 上傳菜單照片,AI 自動解析品項</span>
+      <button class="btn btn-secondary" :disabled="parsingMenu" @click="triggerMenuUpload">
+        {{ parsingMenu ? 'AI 辨識中...' : '上傳照片' }}
+      </button>
+    </div>
+    <input ref="menuFileInput" type="file" accept="image/*" style="display:none;" @change="handleMenuPhoto" />
+  </section>
+
+  <section class="block">
     <h2>餐廳資料(手動輸入)</h2>
     <div class="card">
       <div class="form-group"><label>餐廳名稱</label><input v-model="name" placeholder="例:日式烤肉飯 南崬" /></div>
-      <div class="form-group"><label>Google Map 連結</label><input v-model="mapUrl" placeholder="https://maps.app.goo.gl/..." /></div>
       <div class="form-group"><label>電話</label><input v-model="phone" placeholder="(03) 312-8111" /></div>
       <div class="form-group"><label>地址</label><input v-model="address" placeholder="桃園市蘆竹區..." /></div>
+      <div class="form-group">
+        <label>營業時間</label>
+        <textarea v-model="hours" rows="4" placeholder="例:&#10;星期一至五 11:00–14:00, 17:00–20:30&#10;星期六日 公休"></textarea>
+      </div>
       <div class="form-group">
         <label>餐廳類型</label>
         <select v-model="type">
@@ -137,6 +227,7 @@ async function submit() {
         <span class="rm" @click="removeItemRow(i)">刪除</span>
       </div>
       <div class="form-group"><label>名稱</label><input v-model="it.name" /></div>
+      <div class="form-group"><label>分類</label><input v-model="it.category" placeholder="例:主餐/飲料/小菜" /></div>
       <div class="form-group"><label>價格</label><input v-model.number="it.price" type="number" /></div>
 
       <div style="margin-top:8px;">

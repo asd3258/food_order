@@ -32,6 +32,20 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://food_order:food_order@food_order_db:5432/food_order
       CORS_ORIGINS: http://localhost:5173,http://mike1-virtual-machine:55173,http://192.168.138.68:55173
+
+      # v0.9: AI 菜單解析 -- read from a .env file next to this docker-compose.yml
+      # (see .env.example). The ${VAR:-} form means this is safe even if .env
+      # doesn't exist yet or doesn't define these -- it just falls back to an
+      # empty string, and the AI feature is simply unavailable until you set
+      # a key, instead of breaking the whole deploy.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      # v0.10: Google Places API (New) -- separate Google product/project
+      # from Gemini, needs its own key. See .env.example / README.md.
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+
     ports:
       - "58000:8000"
     command: >

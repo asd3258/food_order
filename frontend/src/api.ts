@@ -57,6 +57,7 @@ export interface MenuItem {
   id: number
   name: string
   price: number
+  category: string
   options: OptionChoice[]
 }
 export interface Photo {
@@ -74,9 +75,26 @@ export interface RestaurantSummary {
 }
 export interface RestaurantDetail extends RestaurantSummary {
   map_url: string
+  hours: string
   menu_items: MenuItem[]
   photos: Photo[]
 }
+
+export interface AiMenuItemDraft {
+  name: string
+  price: number
+  options: OptionChoice[]
+}
+export interface PlaceInfo {
+  phone: string
+  address: string
+  hours: string
+}
+export interface CategorySuggestion {
+  name: string
+  category: string
+}
+
 export interface OrderItemRow {
   id: number
   user: string
@@ -172,6 +190,22 @@ export const api = {
     method: 'PUT', body: JSON.stringify(payload),
   }),
   deleteRestaurant: (id: number) => request<void>(`/api/restaurants/${id}`, { method: 'DELETE' }),
+
+  // v0.9: AI 菜單解析 -- send a photo (data URL), get back draft items to
+  // review/edit before actually creating the restaurant. Gemini-first,
+  // OpenAI-fallback happens entirely on the backend.
+  parseMenuPhoto: (imageUrl: string) => request<AiMenuItemDraft[]>('/api/restaurants/parse-menu', {
+    method: 'POST', body: JSON.stringify({ image_url: imageUrl }),
+  }),
+  // v0.10: reads phone/address/營業時間 off a Google Maps listing (Places API).
+  fetchPlaceInfo: (mapUrl: string) => request<PlaceInfo>('/api/restaurants/fetch-place-info', {
+    method: 'POST', body: JSON.stringify({ map_url: mapUrl }),
+  }),
+  // v0.10: "AI自動分類品項類型" -- suggestions only, doesn't write anything.
+  classifyCategories: (itemNames: string[]) => request<CategorySuggestion[]>('/api/restaurants/classify-categories', {
+    method: 'POST', body: JSON.stringify({ item_names: itemNames }),
+  }),
+
   uploadPhoto: (id: number, imageUrl: string, caption = '') => request<Photo>(
     `/api/restaurants/${id}/photos`, { method: 'POST', body: JSON.stringify({ image_url: imageUrl, caption }) }),
   deletePhoto: (id: number, photoId: number) => request<void>(
