@@ -8,7 +8,7 @@ const activeTab = computed(() => {
   if (['home', 'orderDetail', 'voteDetail'].includes(name)) return 'home'
   if (['restaurantList', 'restaurantMenu', 'editRestaurant'].includes(name)) return 'list'
   if (name === 'orderVote') return 'vote'
-  if (['more', 'history', 'createRestaurant'].includes(name)) return 'more'
+  if (['more', 'history', 'createRestaurant', 'manageUsers'].includes(name)) return 'more'
   return ''
 })
 </script>

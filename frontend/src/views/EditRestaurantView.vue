@@ -5,6 +5,7 @@ import { api, RESTAURANT_TYPES, type RestaurantDetail, type MenuItem } from '../
 import { confirmAction } from '../stores/confirm'
 import { toast } from '../stores/toast'
 import ImageLightbox from '../components/ImageLightbox.vue'
+import { requireLogin } from '../auth'
 
 interface OptionGroupDraft {
   group: string
@@ -118,6 +119,7 @@ function removeOptionGroup(i: number, gi: number) {
 }
 
 async function save() {
+  if (!requireLogin()) return
   await api.updateRestaurant(restaurantId, {
     name: name.value,
     phone: phone.value,

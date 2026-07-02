@@ -6,17 +6,19 @@ from pydantic import BaseModel, ConfigDict
 RESTAURANT_TYPES = ["便當", "飲料", "牛排", "義大利麵"]
 
 
-# ---------- User ----------
-class UserUpsert(BaseModel):
-    client_id: str
-    display_name: str
-    teams_name_raw: Optional[str] = None
+# ---------- User (v0.6: shared roster / "login as" picker) ----------
+class UserCreateIn(BaseModel):
+    name: str
+
+
+class UserRenameIn(BaseModel):
+    name: str
 
 
 class UserOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    client_id: str
-    display_name: str
+    id: int
+    name: str
+    order_count: int = 0  # how many OrderHistoryLine rows mention this name -- powers 快速登入 ordering
 
 
 # ---------- Menu item options ----------

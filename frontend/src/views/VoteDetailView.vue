@@ -7,6 +7,7 @@ import { userStore } from '../stores/user'
 import { confirmAction } from '../stores/confirm'
 import { toast } from '../stores/toast'
 import { canWebShare, copyLink, shareLink } from '../share'
+import { requireLogin } from '../auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -32,6 +33,7 @@ async function updateDeadline() {
 }
 
 async function save() {
+  if (!requireLogin()) return
   if (pendingSelection.value == null) {
     toast('請先選擇一家餐廳')
     return
@@ -41,6 +43,7 @@ async function save() {
   load()
 }
 async function edit() {
+  if (!requireLogin()) return
   // v0.5 behavior change: Edit now immediately clears the saved choice
   // (rather than just unlocking the radios while keeping the old pick) --
   // the vote stops counting toward the tally right away, and the user must

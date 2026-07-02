@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { api, RESTAURANT_TYPES } from '../api'
 import { userStore } from '../stores/user'
 import { toast } from '../stores/toast'
+import { requireLogin } from '../auth'
 
 interface OptionGroupDraft {
   group: string // e.g. "口味" / "加購"
@@ -51,6 +52,7 @@ function parseChoices(text: string): { option_name: string; extra_price: number 
 }
 
 async function submit() {
+  if (!requireLogin()) return
   if (!name.value.trim()) {
     toast('請輸入餐廳名稱')
     return

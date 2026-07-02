@@ -7,6 +7,7 @@ import { userStore } from '../stores/user'
 import { confirmAction } from '../stores/confirm'
 import { toast } from '../stores/toast'
 import { canWebShare, copyLink, shareLink } from '../share'
+import { requireLogin } from '../auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -43,6 +44,7 @@ const sheetChoices = ref<Record<string, string[]>>({})
 const sheetQty = ref(1)
 
 function openItemSheet(item: MenuItem) {
+  if (!requireLogin()) return
   sheetItem.value = item
   sheetChoices.value = {}
   for (const group of Array.from(new Set(item.options.map((o) => o.option_group)))) {

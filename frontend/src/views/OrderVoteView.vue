@@ -5,6 +5,7 @@ import { api, RESTAURANT_TYPES, type RestaurantSummary } from '../api'
 import { HOURS, MINUTES, defaultDeadline, partsToIso, type DeadlineParts } from '../deadline'
 import { userStore } from '../stores/user'
 import { toast } from '../stores/toast'
+import { requireLogin } from '../auth'
 
 const router = useRouter()
 const restaurants = ref<RestaurantSummary[]>([])
@@ -40,6 +41,7 @@ const buttonLabel = computed(() => {
 const buttonDisabled = computed(() => selected.value.size === 0)
 
 async function handleAction() {
+  if (!requireLogin()) return
   const ids = Array.from(selected.value)
   const isoDeadline = partsToIso(deadline.value)
   if (ids.length === 1) {

@@ -49,6 +49,9 @@ RESTAURANTS = [
 ]
 
 
+SEED_USERS = ["Mike Chen", "Tony Su", "Asa Wang", "Vincent Yu"]
+
+
 def seed():
     wait_for_db()
     Base.metadata.create_all(bind=engine)
@@ -57,6 +60,10 @@ def seed():
         if db.query(models.Restaurant).count() > 0:
             print("Already seeded, skipping.")
             return
+
+        for name in SEED_USERS:
+            db.add(models.User(name=name))
+        db.commit()
 
         restaurant_objs = []
         for spec in RESTAURANTS:

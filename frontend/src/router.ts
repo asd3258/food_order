@@ -13,6 +13,8 @@ const router = createRouter({
     { path: '/more', name: 'more', component: () => import('./views/MoreView.vue') },
     { path: '/create-restaurant', name: 'createRestaurant', component: () => import('./views/CreateRestaurantView.vue') },
     { path: '/history', name: 'history', component: () => import('./views/HistoryView.vue') },
+    { path: '/login', name: 'login', component: () => import('./views/LoginView.vue') },
+    { path: '/manage-users', name: 'manageUsers', component: () => import('./views/ManageUsersView.vue') },
   ],
 })
 

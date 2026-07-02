@@ -2,20 +2,14 @@ import { reactive } from 'vue'
 import { api } from '../api'
 import { toast } from './toast'
 
-function getClientId(): string {
-  let id = localStorage.getItem('food_order_client_id')
-  if (!id) {
-    id = 'c_' + Math.random().toString(36).slice(2) + Date.now().toString(36)
-    localStorage.setItem('food_order_client_id', id)
-  }
-  return id
-}
+const STORAGE_KEY = 'food_order_user_id'
 
 // SPEC.md 4.1: a personalized link can carry `?name=` so the first person to
-// open it gets their name pre-filled instead of typing it in manually.
+// open it gets logged in automatically instead of using the login screen.
 // Whoever pastes the link into Teams (or a bot doing it later) is expected
 // to append their own name once, e.g. .../?name=Tony%20Su -- this does NOT
-// know who's clicking automatically, it just saves the sender a step.
+// know who's clicking automatically, it just saves the sender a step; it
+// reuses the same login-or-create endpoint as the manual login screen.
 function consumeNameFromUrl(): string | null {
   const url = new URL(window.location.href)
   const name = url.searchParams.get('name')
@@ -31,29 +25,50 @@ function consumeNameFromUrl(): string | null {
 }
 
 export const userStore = reactive({
-  clientId: getClientId(),
-  username: '訪客',
-  async load() {
+  userId: null as number | null,
+  username: '',
+  get isLoggedIn(): boolean {
+    return this.userId !== null
+  },
+
+  /** Called once on app startup. Restores a previous login from
+   * localStorage (re-validating against the backend, in case that person
+   * was renamed or removed via 管理使用者), or auto-logs-in from a
+   * `?name=` link. */
+  async restore() {
     const nameFromUrl = consumeNameFromUrl()
     if (nameFromUrl) {
-      this.username = nameFromUrl
-      try {
-        await api.saveMe(this.clientId, nameFromUrl)
-        toast(`已帶入名稱:${nameFromUrl}`)
-      } catch {
-        /* backend not reachable yet; keep the name locally, retry on next save */
-      }
+      await this.loginAs(nameFromUrl)
       return
     }
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) return
     try {
-      const me = await api.getMe(this.clientId)
-      this.username = me.display_name
+      const profile = await api.getUser(Number(stored))
+      this.userId = profile.id
+      this.username = profile.name
     } catch {
-      /* backend not reachable yet; keep default */
+      // Deleted from the roster, or backend not reachable yet -- fall back
+      // to logged-out rather than silently acting as a name that no longer
+      // exists.
+      localStorage.removeItem(STORAGE_KEY)
     }
   },
-  async save(name: string) {
-    this.username = name
-    await api.saveMe(this.clientId, name)
+
+  /** Logs in as `name` -- finds the existing roster entry (case-insensitive)
+   * or creates a new one. Used by both the free-text login field and by
+   * clicking a name in the 快速登入 list. */
+  async loginAs(name: string) {
+    const profile = await api.loginOrCreateUser(name)
+    this.userId = profile.id
+    this.username = profile.name
+    localStorage.setItem(STORAGE_KEY, String(profile.id))
+    toast(`已登入:${profile.name}`)
+  },
+
+  logout() {
+    this.userId = null
+    this.username = ''
+    localStorage.removeItem(STORAGE_KEY)
   },
 })

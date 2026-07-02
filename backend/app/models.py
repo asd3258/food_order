@@ -1,12 +1,21 @@
 """
 SQLAlchemy models mirroring SPEC.md v0.5 section 3 (Data Model).
 
-Simplification vs. the spec's User entity: there is no real login yet (matches
-the wireframe). Every "who did this" field (initiator / user / created_by) is
-stored as a plain display-name string rather than a foreign key to a User
-table, since the frontend already treats the username as free text. A `User`
-table is still kept so `/api/users/me` has somewhere to persist a chosen name
-per browser (looked up by a client-generated `client_id`).
+v0.6 change: `User` is now a shared roster of known people (a "login as"
+picker), not a per-browser profile keyed by a client_id. Anyone can pick any
+name from the roster or type a new one -- there's still no password/real
+auth, this is a lightweight identity switcher matching the informal, shared
+nature of the tool (see SPEC.md section 8 risk notes on identity).
+
+Every "who did this" field elsewhere (initiator / user / created_by) is still
+stored as a plain display-name *string*, not a foreign key to User.id. This
+means renaming or deleting a roster entry does not retroactively change past
+orders/votes/history -- those keep whatever name was current when the action
+happened. This is a known limitation: if someone is renamed, actions on
+records created under their old name (e.g. "only the initiator can delete
+this order") will stop matching until the name is changed back. Acceptable
+tradeoff for a small team; would need a real foreign-key identity model to
+fix properly.
 """
 import datetime as dt
 
@@ -25,9 +34,8 @@ def utcnow():
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(String, unique=True, index=True, nullable=False)
-    display_name = Column(String, nullable=False)
-    teams_name_raw = Column(String, nullable=True)
+    name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
 

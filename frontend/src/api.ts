@@ -127,6 +127,11 @@ export interface HistoryPayment {
   total_amount: number
   is_paid: boolean
 }
+export interface UserProfile {
+  id: number
+  name: string
+  order_count: number
+}
 export interface HistoryEntry {
   id: number
   restaurant_name: string
@@ -141,12 +146,16 @@ export interface HistoryEntry {
 export const RESTAURANT_TYPES = ['便當', '飲料', '牛排', '義大利麵']
 
 export const api = {
-  // Users
-  getMe: (clientId: string) => request<{ client_id: string; display_name: string }>(
-    `/api/users/me${qs({ client_id: clientId })}`),
-  saveMe: (clientId: string, displayName: string) => request(`/api/users/me`, {
-    method: 'PUT', body: JSON.stringify({ client_id: clientId, display_name: displayName }),
+  // Users (v0.6: shared roster / login-as picker, not a per-browser profile)
+  listUsers: () => request<UserProfile[]>('/api/users'),
+  getUser: (id: number) => request<UserProfile>(`/api/users/${id}`),
+  loginOrCreateUser: (name: string) => request<UserProfile>('/api/users', {
+    method: 'POST', body: JSON.stringify({ name }),
   }),
+  renameUser: (id: number, name: string) => request<UserProfile>(`/api/users/${id}`, {
+    method: 'PATCH', body: JSON.stringify({ name }),
+  }),
+  deleteUser: (id: number) => request<void>(`/api/users/${id}`, { method: 'DELETE' }),
 
   // Restaurants
   listRestaurants: (q?: string, type?: string) => request<RestaurantSummary[]>(
