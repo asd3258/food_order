@@ -1,12 +1,23 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api, type RestaurantDetail, type OptionChoice } from '../api'
+import { api, type RestaurantDetail, type OptionChoice, type Photo } from '../api'
+import ImageLightbox from '../components/ImageLightbox.vue'
 
 const route = useRoute()
 const router = useRouter()
 const restaurant = ref<RestaurantDetail | null>(null)
 const trackRef = ref<HTMLElement | null>(null)
+
+const lightboxOpen = ref(false)
+const lightboxPhoto = ref<Photo | null>(null)
+function openLightbox(p: Photo) {
+  lightboxPhoto.value = p
+  lightboxOpen.value = true
+}
+function closeLightbox() {
+  lightboxOpen.value = false
+}
 
 function flavorStr(options: OptionChoice[]): string {
   const groups = groupBy(options.filter((o) => o.option_type === 'radio'))
@@ -72,7 +83,8 @@ function goEdit() {
       <div class="carousel-track" ref="trackRef">
         <div v-if="!restaurant.photos.length" class="carousel-slide" style="background:#999;">📷</div>
         <div v-for="p in restaurant.photos" :key="p.id" class="carousel-slide"
-             :style="p.image_url.startsWith('placeholder:') ? { background: p.image_url.replace('placeholder:', '') } : {}">
+             :style="p.image_url.startsWith('placeholder:') ? { background: p.image_url.replace('placeholder:', '') } : {}"
+             @click="openLightbox(p)">
           <img v-if="!p.image_url.startsWith('placeholder:')" :src="p.image_url" />
           <span v-else>📷</span>
           <span class="cap">{{ p.caption }}</span>
@@ -81,6 +93,14 @@ function goEdit() {
       <button class="carousel-arrow left" @click="scrollCarousel(-1)">‹</button>
       <button class="carousel-arrow right" @click="scrollCarousel(1)">›</button>
     </div>
+
+    <ImageLightbox
+      :visible="lightboxOpen"
+      :image-url="lightboxPhoto?.image_url"
+      :placeholder-color="lightboxPhoto?.image_url.startsWith('placeholder:') ? lightboxPhoto.image_url.replace('placeholder:', '') : null"
+      :caption="lightboxPhoto?.caption"
+      @close="closeLightbox"
+    />
 
     <div class="menu-cat" style="font-size:12px;color:var(--muted);font-weight:600;">餐廳資訊</div>
     <div class="card">

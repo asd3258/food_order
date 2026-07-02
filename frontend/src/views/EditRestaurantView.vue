@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api, RESTAURANT_TYPES, type RestaurantDetail, type MenuItem } from '../api'
 import { confirmAction } from '../stores/confirm'
 import { toast } from '../stores/toast'
+import ImageLightbox from '../components/ImageLightbox.vue'
 
 interface OptionGroupDraft {
   group: string
@@ -28,6 +29,16 @@ const type = ref(RESTAURANT_TYPES[0])
 const photos = ref<{ id?: number; image_url: string; caption: string; isNew?: boolean }[]>([])
 const items = ref<ItemDraft[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
+
+const lightboxOpen = ref(false)
+const lightboxPhoto = ref<{ image_url: string; caption: string } | null>(null)
+function openLightbox(p: { image_url: string; caption: string }) {
+  lightboxPhoto.value = p
+  lightboxOpen.value = true
+}
+function closeLightbox() {
+  lightboxOpen.value = false
+}
 
 // Turn the flat MenuItemOption[] the backend returns back into editable
 // group rows -- inverse of parseChoices() below. Groups are kept in the
@@ -168,12 +179,20 @@ function cancel() {
     <input ref="fileInput" type="file" accept="image/*" style="display:none;" @change="handleFile" />
     <div v-if="!photos.length" class="empty">尚未上傳照片</div>
     <div v-else style="display:flex;flex-wrap:wrap;gap:8px;">
-      <div v-for="(p, i) in photos" :key="p.id ?? 'new-' + i" class="photo-thumb">
+      <div v-for="(p, i) in photos" :key="p.id ?? 'new-' + i" class="photo-thumb" style="cursor:pointer;" @click="openLightbox(p)">
         <img v-if="!p.image_url.startsWith('placeholder:')" :src="p.image_url" />
         <div v-else class="ph-ph" :style="{ background: p.image_url.replace('placeholder:', '') }">📷</div>
-        <span class="ph-rm" @click="removePhoto(i)">×</span>
+        <span class="ph-rm" @click.stop="removePhoto(i)">×</span>
       </div>
     </div>
+
+    <ImageLightbox
+      :visible="lightboxOpen"
+      :image-url="lightboxPhoto?.image_url"
+      :placeholder-color="lightboxPhoto?.image_url.startsWith('placeholder:') ? lightboxPhoto.image_url.replace('placeholder:', '') : null"
+      :caption="lightboxPhoto?.caption"
+      @close="closeLightbox"
+    />
   </section>
 
   <section class="block">

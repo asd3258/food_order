@@ -6,6 +6,7 @@ import { HOURS, MINUTES, formatDeadline, isoToParts, partsToIso, type DeadlinePa
 import { userStore } from '../stores/user'
 import { confirmAction } from '../stores/confirm'
 import { toast } from '../stores/toast'
+import { canWebShare, copyLink, shareLink } from '../share'
 
 const route = useRoute()
 const router = useRouter()
@@ -63,6 +64,18 @@ async function remove() {
   toast('已刪除投票')
   router.push('/')
 }
+
+const shareSupported = canWebShare()
+function currentUrl(): string {
+  return window.location.href
+}
+function doCopyLink() {
+  copyLink(currentUrl())
+}
+function doShare() {
+  const names = batch.value?.candidates.map((c) => c.restaurant_name).join('/') || ''
+  shareLink(`投票${batchId}`, `幫忙投一票吃什麼(${names}),點連結進去選:`, currentUrl())
+}
 </script>
 
 <template>
@@ -72,6 +85,11 @@ async function remove() {
   </div>
 
   <template v-if="batch">
+    <div class="btn-row">
+      <button class="btn btn-secondary" @click="doCopyLink">🔗 複製連結</button>
+      <button v-if="shareSupported" class="btn btn-secondary" @click="doShare">📤 分享</button>
+    </div>
+
     <div v-if="!isInitiator" class="deadline-inline">
       <span>截止時間</span><strong>{{ formatDeadline(batch.deadline_at) }}</strong>
     </div>

@@ -6,6 +6,7 @@ import { HOURS, MINUTES, formatDeadline, isoToParts, partsToIso, type DeadlinePa
 import { userStore } from '../stores/user'
 import { confirmAction } from '../stores/confirm'
 import { toast } from '../stores/toast'
+import { canWebShare, copyLink, shareLink } from '../share'
 
 const route = useRoute()
 const router = useRouter()
@@ -120,6 +121,18 @@ async function deleteOrder() {
 function mapUrl(r: RestaurantDetail): string {
   return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(r.name + ' ' + r.address)
 }
+
+const shareSupported = canWebShare()
+function currentUrl(): string {
+  return window.location.href
+}
+function doCopyLink() {
+  copyLink(currentUrl())
+}
+function doShare() {
+  const rname = restaurant.value?.name || '訂單'
+  shareLink(`訂單${orderId} - ${rname}`, `一起訂 ${rname} 吧,點連結進去選你要的品項:`, currentUrl())
+}
 </script>
 
 <template>
@@ -129,6 +142,11 @@ function mapUrl(r: RestaurantDetail): string {
   </div>
 
   <template v-if="order && restaurant">
+    <div class="btn-row">
+      <button class="btn btn-secondary" @click="doCopyLink">🔗 複製連結</button>
+      <button v-if="shareSupported" class="btn btn-secondary" @click="doShare">📤 分享</button>
+    </div>
+
     <div v-if="!isInitiator" class="deadline-inline">
       <span>截止時間</span><strong>{{ formatDeadline(order.deadline_at) }}</strong>
     </div>
