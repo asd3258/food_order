@@ -6,7 +6,13 @@
 
 import { toast } from './stores/toast'
 
-const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+// v0.10 follow-up: "" (relative /api/... path, same origin nginx proxies to
+// the backend -- see nginx.conf) is now the production default so this
+// works from the LAN, Tailscale, or anywhere else without rebuilding.
+// Nullish-coalescing (not ||) because "" is a deliberate, valid value here
+// -- only fall back to the localhost dev default when the var is truly
+// unset (plain `npm run dev`, no .env).
+const BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response

@@ -52,13 +52,11 @@ services:
   food_order_web:
     build:
       context: ./frontend
-      args:
-        # Vite bakes this in at build time -- it must be reachable from the
-        # *browser* (phone/PC), so use an address those devices can actually
-        # resolve. The hostname "mike1-virtual-machine" isn't resolvable from
-        # phones on this network, so use the VM's LAN IP directly instead.
-        # If the VM's IP ever changes (DHCP), update this and rebuild.
-        VITE_API_BASE: http://192.168.138.68:58000
+      # v0.10 follow-up: no VITE_API_BASE build arg anymore -- nginx.conf
+      # proxies /api/* to food_order_api internally, so the frontend just
+      # calls a same-origin relative path. This is what fixed access over
+      # Tailscale (or any other network) breaking on "編輯餐廳 -> 儲存變更":
+      # baking in a fixed LAN IP only worked for devices on that exact LAN.
     container_name: food_order_web
     restart: unless-stopped
     depends_on:
