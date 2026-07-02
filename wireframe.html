@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>訂餐統計 App - 線框 Prototype</title>
+<style>
+  :root{
+    --brand:#5b5fc7;
+    --brand-dark:#4a4ecb;
+    --bg:#f3f2f1;
+    --card:#ffffff;
+    --text:#242424;
+    --muted:#6b6b6b;
+    --border:#e1dfdd;
+    --locked:#d9d9d9;
+    --danger:#c4314b;
+    --ok:#107c41;
+    --hl:#b45309;
+    --hl-bg:#fff7ed;
+    --hl-border:#fdba74;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei",sans-serif;
+    background:#2b2b3d;
+    color:var(--text);
+    display:flex;
+    justify-content:center;
+    min-height:100vh;
+    padding:20px 0;
+  }
+  .phone{
+    width:390px;
+    max-width:100%;
+    background:var(--bg);
+    border-radius:28px;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    height:800px;
+    position:relative;
+    border:6px solid #111;
+  }
+  .statusbar{
+    height:28px;background:#111;color:#fff;font-size:11px;
+    display:flex;align-items:center;justify-content:space-between;padding:0 16px;
+    flex-shrink:0;
+  }
+  header.topbar{
+    background:var(--brand);
+    color:#fff;
+    padding:10px 14px;
+    flex-shrink:0;
+  }
+  header.topbar .title{font-size:16px;font-weight:600;margin-bottom:8px;}
+  .username-row{display:flex;gap:6px;align-items:center;}
+  .username-row input{
+    flex:1;padding:7px 10px;border-radius:8px;border:none;font-size:13px;
+  }
+  .username-row button{
+    background:#fff;color:var(--brand);border:none;border-radius:8px;
+    padding:7px 12px;font-size:12px;font-weight:600;
+  }
+  .username-hint{font-size:10px;opacity:.85;margin-top:4px;}
+
+  main{flex:1;overflow-y:auto;padding:14px;padding-bottom:80px;}
+  section.block{margin-bottom:18px;}
+  section.block h2{
+    font-size:13px;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.03em;margin:0 0 8px 2px;display:flex;justify-content:space-between;align-items:center;
+  }
+  section.block h2.h2-highlight{color:var(--hl);font-weight:800;}
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:12px;
+    padding:12px;margin-bottom:8px;
+  }
+  .card.card-highlight{background:var(--hl-bg);border-color:var(--hl-border);}
+  .order-card{display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+  .order-card:active{background:#f6f6f6;}
+  .order-card .name{font-weight:600;font-size:14px;}
+  .order-card .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  .chevron{color:var(--muted);}
+  .empty{color:var(--muted);font-size:13px;padding:14px 4px;text-align:center;}
+
+  .vote-item{display:flex;align-items:center;gap:10px;padding:8px 4px;}
+  .vote-item input[type=radio]{width:18px;height:18px;}
+  .vote-item.locked{opacity:.55;}
+  .vote-item .vname{flex:1;font-size:14px;}
+  .vote-item .vcount{font-size:12px;color:var(--muted);background:#f0f0f0;padding:2px 8px;border-radius:10px;}
+  .vote-actions{display:flex;gap:8px;margin-top:8px;}
+  .initiator-actions{display:flex;gap:8px;margin-bottom:14px;}
+
+  button.btn{
+    border:none;border-radius:10px;padding:10px 14px;font-size:14px;font-weight:600;
+    cursor:pointer;
+  }
+  button.btn-primary{background:var(--brand);color:#fff;flex:1;}
+  button.btn-secondary{background:#eceaf9;color:var(--brand);flex:1;}
+  button.btn-danger{background:var(--danger);color:#fff;flex:1;}
+  button.btn-primary:disabled{background:#c9c8e6;cursor:not-allowed;}
+  button.btn-full{width:100%;margin-top:6px;}
+  a.btn{display:block;text-align:center;text-decoration:none;}
+
+  nav.bottomnav{
+    position:absolute;bottom:0;left:0;right:0;
+    background:#fff;border-top:1px solid var(--border);
+    display:flex;flex-shrink:0;
+  }
+  nav.bottomnav button{
+    flex:1;background:none;border:none;padding:10px 2px 8px;
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    color:var(--muted);font-size:10.5px;cursor:pointer;
+  }
+  nav.bottomnav button .ic{font-size:18px;}
+  nav.bottomnav button.active{color:var(--brand);font-weight:600;}
+
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  .page-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .page-header .back{font-size:20px;color:var(--brand);cursor:pointer;padding:2px 6px;}
+  .page-header h1{font-size:16px;margin:0;}
+
+  .deadline-inline{display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:12px;flex-wrap:wrap;color:var(--text);}
+  .deadline-inline strong{color:var(--text);}
+  select.time-select, input.time-select{padding:7px 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff;}
+
+  .search-row input{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:8px;}
+  .type-filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .type-chip{padding:6px 12px;border-radius:16px;border:1px solid var(--border);background:#fff;font-size:12px;cursor:pointer;color:var(--text);}
+  .type-chip.active{background:var(--brand);color:#fff;border-color:var(--brand);}
+
+  .menu-cat{font-size:12px;color:var(--muted);font-weight:600;margin:14px 0 6px 2px;text-transform:uppercase;}
+  .menu-item{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--card);border:1px solid var(--border);border-radius:12px;
+    padding:12px;margin-bottom:8px;cursor:pointer;
+  }
+  .menu-item:active{background:#f6f6f6;}
+  .menu-item .mi-name{font-size:14px;font-weight:600;}
+  .menu-item .mi-price{font-size:12px;color:var(--muted);margin-top:2px;}
+  .plus-badge{
+    width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+  }
+
+  .cart-bar{
+    position:sticky;bottom:0;background:var(--brand-dark);color:#fff;border-radius:12px;
+    padding:10px 14px;display:flex;justify-content:space-between;align-items:center;
+    margin-top:10px;font-size:13px;
+  }
+  .cart-line{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--border);}
+  .cart-line:last-child{border-bottom:none;}
+  .cart-line .rm{color:var(--danger);cursor:pointer;font-size:11px;margin-left:8px;}
+
+  .stat-table{width:100%;font-size:12px;border-collapse:collapse;}
+  .stat-table th,.stat-table td{text-align:left;padding:5px 4px;border-bottom:1px solid var(--border);}
+  .stat-table th{color:var(--muted);font-weight:600;}
+  .stat-table.wide{font-size:11px;}
+  .stat-table.wide th,.stat-table.wide td{padding:5px 3px;}
+  .stat-table .rm{color:var(--danger);cursor:pointer;font-size:10px;margin-left:6px;}
+
+  .checkbox-item{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;}
+  .checkbox-item input{width:18px;height:18px;}
+  .checkbox-item .cname{font-size:14px;font-weight:600;flex:1;}
+
+  .nav-card{display:flex;align-items:center;gap:12px;cursor:pointer;}
+  .nav-card .nc-ic{font-size:22px;width:34px;text-align:center;}
+  .nav-card .nc-name{font-size:15px;font-weight:600;flex:1;}
+
+  .deadline-row{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;}
+  .deadline-row label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
+
+  /* Photo carousel */
+  .carousel{position:relative;margin:8px 0 12px;}
+  .carousel-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;border-radius:12px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .carousel-track::-webkit-scrollbar{display:none;}
+  .carousel-slide{flex:0 0 100%;scroll-snap-align:start;height:150px;display:flex;align-items:center;justify-content:center;font-size:44px;color:#fff;position:relative;overflow:hidden;}
+  .carousel-slide img{width:100%;height:100%;object-fit:cover;}
+  .carousel-slide .cap{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:12px;background:rgba(0,0,0,.4);padding:5px;color:#fff;}
+  .carousel-arrow{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);color:#fff;border:none;width:28px;height:28px;border-radius:50%;font-size:15px;cursor:pointer;z-index:5;}
+  .carousel-arrow.left{left:6px;}
+  .carousel-arrow.right{right:6px;}
+  .info-row{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--border);}
+  .info-row:last-child{border-bottom:none;}
+  .info-row .lbl{color:var(--muted);}
+
+  /* Bottom sheet modal */
+  .overlay{
+    position:absolute;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;z-index:50;
+  }
+  .overlay.active{display:flex;}
+  .sheet{
+    background:#fff;width:100%;border-radius:18px 18px 0 0;padding:16px;max-height:80%;overflow-y:auto;
+  }
+  .sheet h3{margin:0 0 4px;font-size:16px;}
+  .sheet .price{color:var(--muted);font-size:13px;margin-bottom:12px;}
+  .opt-group-title{font-size:12px;font-weight:700;color:var(--text);margin:12px 0 6px;}
+  .opt-choice{display:flex;align-items:center;gap:8px;padding:6px 2px;font-size:13px;}
+  .qty-row{display:flex;align-items:center;justify-content:space-between;margin-top:14px;}
+  .qty-ctrl{display:flex;align-items:center;gap:12px;}
+  .qty-ctrl button{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:#f5f5f5;font-size:16px;}
+  .sheet-actions{display:flex;gap:8px;margin-top:16px;}
+
+  #confirmOverlay{align-items:center;justify-content:center;z-index:60;}
+  #confirmOverlay .confirm-box{border-radius:16px;max-width:280px;text-align:center;}
+  #confirmMessage{font-size:14px;margin:4px 0 16px;line-height:1.6;}
+
+  .form-group{margin-bottom:10px;}
+  .form-group label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .form-group input, .form-group select{
+    width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;
+  }
+  .item-row{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;}
+  .item-row-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .item-row-head .rm{color:var(--danger);font-size:12px;cursor:pointer;}
+  .opt-chip{display:inline-block;background:#eceaf9;color:var(--brand);font-size:11px;padding:3px 8px;border-radius:10px;margin:2px 4px 0 0;}
+  .disabled-feature{
+    background:#f0f0f0;border:1px dashed var(--border);border-radius:10px;padding:10px;
+    font-size:12px;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;
+  }
+  .tag-phase{background:#e8e8e8;color:#888;font-size:10px;padding:2px 6px;border-radius:6px;white-space:nowrap;}
+
+  .history-card .hc-head{display:flex;justify-content:space-between;cursor:pointer;}
+  .history-card .hc-detail{display:none;margin-top:8px;}
+  .history-card.open .hc-detail{display:block;}
+  .payment-row{display:flex;align-items:center;gap:10px;padding:6px 2px;font-size:13px;}
+  .payment-row input{width:17px;height:17px;}
+  .payment-row .puser{flex:1;}
+  .payment-row .pamt{color:var(--muted);font-size:12px;}
+
+  .photo-thumb{position:relative;width:84px;height:84px;border-radius:8px;overflow:hidden;}
+  .photo-thumb img{width:100%;height:100%;object-fit:cover;}
+  .photo-thumb .ph-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;}
+  .photo-thumb .ph-rm{position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;}
+
+  .toast{
+    position:absolute;bottom:70px;left:50%;transform:translateX(-50%);
+    background:#242424;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;
+    opacity:0;transition:opacity .25s;pointer-events:none;z-index:80;
+  }
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span>訂餐統計 · Wireframe</span><span>🔋</span></div>
+
+  <header class="topbar">
+    <div class="title" id="topbarTitle">訂餐統計</div>
+    <div class="username-row">
+      <input id="usernameInput" type="text" value="Mike Chen">
+      <button onclick="saveUsername()">Save</button>
+    </div>
+    <div class="username-hint">已帶入 Teams 顯示名稱,可自行修改</div>
+  </header>
+
+  <main>
+
+    <!-- ============ HOME ============ -->
+    <div class="screen active" id="screen-home">
+      <section class="block">
+        <h2>當前已發起訂單</h2>
+        <div id="ordersList"></div>
+      </section>
+
+      <section class="block">
+        <h2>目前投票中</h2>
+        <div id="voteBatchesList"></div>
+      </section>
+    </div>
+
+    <!-- ============ RESTAURANT LIST (browse only) ============ -->
+    <div class="screen" id="screen-restaurantList">
+      <div class="page-header">
+        <span class="back" onclick="goHome()">←</span>
+        <h1>餐廳清單</h1>
+      </div>
+      <div class="search-row"><input type="text" id="listSearchInput" placeholder="搜尋餐廳或品項名稱" oninput="onListSearchInput()"></div>
+      <div class="type-filter-row" id="listTypeFilterRow"></div>
+      <div id="restaurantNameCards"></div>
+    </div>
+
+    <!-- ============ RESTAURANT MENU (read-only) ============ -->
+    <div class="screen" id="screen-restaurantMenu">
+      <div class="page-header">
+        <span class="back" onclick="showScreen('restaurantList')">←</span>
+        <h1 id="restaurantMenuTitle">餐廳菜單</h1>
+      </div>
+      <button class="btn btn-secondary btn-full" onclick="openEditRestaurant(state.currentRestaurantMenuId)">✏️ 編輯餐廳資料</button>
+      <div id="restaurantMenuContent"></div>
+    </div>
+
+    <!-- ============ EDIT RESTAURANT ============ -->
+    <div class="screen" id="screen-editRestaurant">
+      <div class="page-header">
+        <span class="back" onclick="cancelEditRestaurant()">←</span>
+        <h1>編輯餐廳</h1>
+      </div>
+
+      <section class="block">
+        <h2>餐廳資料</h2>
+        <div class="card">
+          <div class="form-group"><label>餐廳名稱</label><input id="editRName"></div>
+          <div class="form-group"><label>電話</label><input id="editRPhone"></div>
+          <div class="form-group"><label>地址</label><input id="editRAddr"></div>
+          <div class="form-group"><label>餐廳類型</label><select id="editRType"></select></div>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>餐廳照片<span onclick="triggerUploadPhoto()" style="color:var(--brand);font-weight:600;cursor:pointer;">+ 上傳圖片</span></h2>
+        <input type="file" id="editPhotoInput" accept="image/*" style="display:none;" onchange="handlePhotoUpload(event)">
+        <div id="editPhotoList"></div>
+      </section>
+
+      <section class="block">
+        <h2>品項清單<span onclick="addEditMenuItemRow()" style="color:var(--brand);font-weight:600;cursor:pointer;">+ 新增品項</span></h2>
+        <div id="editItemRows"></div>
+      </section>
+
+      <button class="btn btn-primary btn-full" onclick="saveEditRestaurant()">儲存變更</button>
+    </div>
+
+    <!-- ============ ORDER & VOTE (開單與投票) ============ -->
+    <div class="screen" id="screen-vote">
+      <div class="page-header">
+        <span class="back" onclick="goHome()">←</span>
+        <h1>開單與投票</h1>
+      </div>
+
+      <section class="block">
+        <h2>選擇餐廳</h2>
+        <div class="search-row"><input type="text" id="voteSearchInput" placeholder="搜尋餐廳或品項名稱" oninput="onVoteSearchInput()"></div>
+        <div class="type-filter-row" id="voteTypeFilterRow"></div>
+        <div id="voteRestaurantCheckList"></div>
+
+        <div class="deadline-row">
+          <label>截止時間</label>
+          <div class="deadline-inline" style="margin-bottom:0;">
+            <input type="date" id="voteDeadlineDate" class="time-select">
+            <select id="voteDeadlineHour" class="time-select"></select>
+            <span>:</span>
+            <select id="voteDeadlineMinute" class="time-select"></select>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-full" id="voteActionBtn" disabled onclick="handleRestaurantAction()">請選擇餐廳</button>
+      </section>
+    </div>
+
+    <!-- ============ VOTE DETAIL ============ -->
+    <div class="screen" id="screen-voteDetail">
+      <div class="page-header">
+        <span class="back" onclick="goHome()">←</span>
+        <h1 id="voteDetailTitle">投票</h1>
+      </div>
+
+      <div class="deadline-inline" id="voteDetailDeadlineView">
+        <span>截止時間</span><strong id="voteDetailDeadlineText"></strong>
+      </div>
+      <div class="deadline-inline" id="voteDetailDeadlineEdit" style="display:none;">
+        <span>截止時間</span>
+        <input type="date" id="voteEditDate" class="time-select">
+        <select id="voteEditHour" class="time-select"></select>
+        <span>:</span>
+        <select id="voteEditMinute" class="time-select"></select>
+        <button class="btn btn-secondary" style="flex:none;padding:7px 12px;" onclick="saveVoteDeadline()">更新</button>
+      </div>
+
+      <div class="initiator-actions" id="voteInitiatorActions" style="display:none;">
+        <button class="btn btn-primary" onclick="confirmAction('確定要開票嗎?將依目前票數最高的餐廳自動建立訂單。', handleOpenVote)">開票</button>
+        <button class="btn btn-danger" onclick="confirmAction('確定要刪除此投票嗎?此動作無法復原。', handleDeleteVote)">刪除</button>
+      </div>
+
+      <section class="block">
+        <h2>候選餐廳</h2>
+        <div class="card">
+          <div id="voteDetailList"></div>
+          <div class="vote-actions">
+            <button class="btn btn-primary" id="voteDetailSaveBtn">Save</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============ ORDER DETAIL ============ -->
+    <div class="screen" id="screen-orderDetail">
+      <div class="page-header">
+        <span class="back" onclick="goHome()">←</span>
+        <h1 id="orderDetailTitle">點餐</h1>
+      </div>
+
+      <div class="deadline-inline" id="orderDetailDeadlineView">
+        <span>截止時間</span><strong id="orderDetailDeadlineText"></strong>
+      </div>
+      <div class="deadline-inline" id="orderDetailDeadlineEdit" style="display:none;">
+        <span>截止時間</span>
+        <input type="date" id="orderEditDate" class="time-select">
+        <select id="orderEditHour" class="time-select"></select>
+        <span>:</span>
+        <select id="orderEditMinute" class="time-select"></select>
+        <button class="btn btn-secondary" style="flex:none;padding:7px 12px;" onclick="saveOrderDeadline()">更新</button>
+      </div>
+
+      <div class="initiator-actions" id="orderInitiatorActions" style="display:none;">
+        <button class="btn btn-secondary" onclick="confirmAction('確定要結單嗎?統計結果將寫入歷史訂單。', handleCloseOrder)">結單</button>
+        <button class="btn btn-danger" onclick="confirmAction('確定要刪除此訂單嗎?此動作無法復原。', handleDeleteOrder)">刪除</button>
+      </div>
+
+      <div id="menuList"></div>
+
+      <section class="block">
+        <h2 class="h2-highlight">我的訂單</h2>
+        <div class="card card-highlight" id="myCart"><div class="empty">尚未選擇品項</div></div>
+        <div class="cart-bar">
+          <span>小計</span>
+          <strong id="cartTotal">$0</strong>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>目前所有人統計(彙總)</h2>
+        <div class="card">
+          <table class="stat-table wide" id="statTable">
+            <tr><th>品項 / 選項</th><th>人員</th><th>數量</th><th>金額</th></tr>
+          </table>
+        </div>
+      </section>
+
+      <a class="btn btn-secondary btn-full" id="orderMapLink" href="#" target="_blank">📍 在 Google Maps 開啟</a>
+    </div>
+
+    <!-- ============ OTHER FUNCTIONS HUB ============ -->
+    <div class="screen" id="screen-more">
+      <div class="page-header">
+        <span class="back" onclick="goHome()">←</span>
+        <h1>其他功能</h1>
+      </div>
+      <div class="card nav-card" onclick="showScreen('history')">
+        <span class="nc-ic">🕘</span><span class="nc-name">歷史訂單</span><span class="chevron">›</span>
+      </div>
+      <div class="card nav-card" onclick="showScreen('createRestaurant')">
+        <span class="nc-ic">➕</span><span class="nc-name">建立餐廳</span><span class="chevron">›</span>
+      </div>
+    </div>
+
+    <!-- ============ CREATE RESTAURANT ============ -->
+    <div class="screen" id="screen-createRestaurant">
+      <div class="page-header">
+        <span class="back" onclick="goMore()">←</span>
+        <h1>建立新餐廳</h1>
+      </div>
+
+      <div class="disabled-feature">
+        <span>📷 上傳菜單照片,AI 自動解析品項</span>
+        <span class="tag-phase">Phase 2</span>
+      </div>
+      <div class="disabled-feature">
+        <span>🗺️ 貼上 Google Maps 網址,AI 自動生成菜單</span>
+        <span class="tag-phase">Phase 3</span>
+      </div>
+      <div class="disabled-feature">
+        <span>🔗 串接 Uber Eats / foodpanda 生成菜單</span>
+        <span class="tag-phase">評估中</span>
+      </div>
+
+      <section class="block">
+        <h2>餐廳資料(手動輸入)</h2>
+        <div class="card">
+          <div class="form-group"><label>餐廳名稱</label><input id="newRName" placeholder="例:日式烤肉飯 南崬"></div>
+          <div class="form-group"><label>電話</label><input id="newRPhone" placeholder="(03) 312-8111"></div>
+          <div class="form-group"><label>地址</label><input id="newRAddr" placeholder="桃園市蘆竹區..."></div>
+          <div class="form-group"><label>餐廳類型</label><select id="newRType"></select></div>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>品項清單<span onclick="addMenuItemRow()" style="color:var(--brand);font-weight:600;cursor:pointer;">+ 新增品項</span></h2>
+        <div id="newItemRows"></div>
+      </section>
+
+      <button class="btn btn-primary btn-full" onclick="submitNewRestaurant()">建立餐廳</button>
+    </div>
+
+    <!-- ============ HISTORY ============ -->
+    <div class="screen" id="screen-history">
+      <div class="page-header">
+        <span class="back" onclick="goMore()">←</span>
+        <h1>歷史訂單</h1>
+      </div>
+      <div id="historyList"></div>
+    </div>
+
+  </main>
+
+  <nav class="bottomnav">
+    <button class="active" id="nav-home" onclick="goHome()"><span class="ic">🏠</span>首頁</button>
+    <button id="nav-list" onclick="showScreen('restaurantList')"><span class="ic">📋</span>餐廳清單</button>
+    <button id="nav-vote" onclick="showScreen('vote')"><span class="ic">🗳️</span>開單與投票</button>
+    <button id="nav-more" onclick="showScreen('more')"><span class="ic">⋯</span>其他功能</button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Item customization bottom sheet -->
+  <div class="overlay" id="overlay" onclick="if(event.target===this)closeSheet()">
+    <div class="sheet" id="sheet"></div>
+  </div>
+
+  <!-- Generic Yes/No confirm modal -->
+  <div class="overlay" id="confirmOverlay" onclick="if(event.target===this)confirmNo()">
+    <div class="sheet confirm-box">
+      <p id="confirmMessage"></p>
+      <div class="sheet-actions">
+        <button class="btn btn-secondary" onclick="confirmNo()">No</button>
+        <button class="btn btn-primary" onclick="confirmYes()">Yes</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ---------------- Constants ---------------- */
+const CATEGORIES = ['便當','飲料','牛排','義大利麵'];
+
+/* ---------------- Mock Data ---------------- */
+let restaurants = [
+  { id:1, name:'日式烤肉飯 南崬', type:'便當', phone:'(03) 312-8111', addr:'桃園市蘆竹區南崁路300號',
+    photos:[
+      {emoji:'🍚', label:'招牌雙拼飯', color:'#c2410c'},
+      {emoji:'🥩', label:'烤牛肉飯特寫', color:'#7c2d12'},
+      {emoji:'🏠', label:'店內環境', color:'#78350f'},
+    ],
+    menu:[
+      {id:101, name:'烤牛雙拼飯', price:129, options:[
+        {group:'口味', type:'radio', choices:[['原味',0],['泰式',0],['五辣',0]]}
+      ]},
+      {id:102, name:'烤雞雙拼飯', price:119, options:[
+        {group:'口味', type:'radio', choices:[['原味',0],['泰式',0]]}
+      ]},
+      {id:103, name:'烤牛肉飯', price:99, options:[
+        {group:'口味', type:'radio', choices:[['原味',0],['泰式',0],['五辣',0]]},
+        {group:'加購', type:'checkbox', choices:[['白飯加量',20],['半熟蛋',15],['泡菜',20]]}
+      ]},
+      {id:104, name:'烤雞腿飯', price:99, options:[
+        {group:'口味', type:'radio', choices:[['原味',0],['泰式',0]]},
+        {group:'加購', type:'checkbox', choices:[['白飯加量',20],['半熟蛋',15]]}
+      ]},
+    ]},
+  { id:2, name:'鬍鬚張魯肉飯', type:'便當', phone:'(03) 555-2222', addr:'桃園市蘆竹區中正路100號',
+    photos:[
+      {emoji:'🍱', label:'魯肉飯', color:'#92400e'},
+      {emoji:'🍗', label:'雞腿飯', color:'#b45309'},
+    ],
+    menu:[
+      {id:201, name:'魯肉飯', price:35, options:[{group:'口味', type:'radio', choices:[['小份',0],['大份',10]]}]},
+      {id:202, name:'雞腿飯', price:89, options:[{group:'加購', type:'checkbox', choices:[['滷蛋',10],['燙青菜',20]]}]},
+    ]},
+  { id:3, name:'八方雲集', type:'便當', phone:'(03) 777-8888', addr:'桃園市蘆竹區南崁北路50號',
+    photos:[
+      {emoji:'🥟', label:'鍋貼', color:'#155e75'},
+      {emoji:'🍲', label:'酸辣湯', color:'#0e7490'},
+    ],
+    menu:[
+      {id:301, name:'鍋貼(10顆)', price:60, options:[]},
+      {id:302, name:'酸辣湯', price:35, options:[]},
+    ]},
+  { id:4, name:'50嵐', type:'飲料', phone:'(03) 888-1234', addr:'桃園市蘆竹區中山路20號',
+    photos:[ {emoji:'🧋', label:'招牌飲品', color:'#065f46'} ],
+    menu:[
+      {id:401, name:'珍珠奶茶', price:55, options:[
+        {group:'甜度', type:'radio', choices:[['正常',0],['少糖',0],['半糖',0],['無糖',0]]},
+        {group:'冰塊', type:'radio', choices:[['正常冰',0],['少冰',0],['去冰',0]]}
+      ]},
+      {id:402, name:'四季春茶', price:30, options:[{group:'甜度', type:'radio', choices:[['正常',0],['少糖',0],['無糖',0]]}]},
+    ]},
+  { id:5, name:'貴族世家牛排', type:'牛排', phone:'(03) 999-5678', addr:'桃園市蘆竹區介壽路88號',
+    photos:[ {emoji:'🥩', label:'嫩煎牛排', color:'#7c2d12'} ],
+    menu:[
+      {id:501, name:'嫩煎沙朗牛排', price:220, options:[{group:'熟度', type:'radio', choices:[['三分',0],['五分',0],['七分',0],['全熟',0]]}]},
+      {id:502, name:'蘑菇醬牛排', price:250, options:[{group:'熟度', type:'radio', choices:[['三分',0],['五分',0],['七分',0]]}]},
+    ]},
+  { id:6, name:'義麵坊', type:'義大利麵', phone:'(03) 222-3456', addr:'桃園市蘆竹區忠孝路15號',
+    photos:[ {emoji:'🍝', label:'奶油培根義大利麵', color:'#92400e'} ],
+    menu:[
+      {id:601, name:'奶油培根義大利麵', price:150, options:[{group:'份量', type:'radio', choices:[['正常',0],['加大',30]]}]},
+      {id:602, name:'紅醬肉丸義大利麵', price:160, options:[]},
+    ]},
+];
+
+let state = {
+  username:'Mike Chen',
+  orders:[
+    { id:1, restaurantId:1, initiator:'Mike Chen', deadline:{date:'2026-07-02',hour:12,minute:30}, items:[
+      {menuId:103, name:'烤牛肉飯', opts:['原味'], extra:0, qty:1, unit:99, user:'Tony Su'},
+      {menuId:101, name:'烤牛雙拼飯', opts:['泰式'], extra:0, qty:1, unit:129, user:'Asa Wang'},
+    ]},
+  ],
+  nextOrderId:2,
+  voteBatches:[
+    { id:1, candidates:[1,2,3], initiator:'Mike Chen', deadline:{date:'2026-07-02',hour:11,minute:0},
+      otherLocked:{ '日式烤肉飯 南崬':2, '鬍鬚張魯肉飯':1 }, mySelection:null, myLocked:false },
+  ],
+  nextVoteId:2,
+  currentVoteId:null,
+  cart:[],           // current user's cart in order detail screen
+  currentOrderId:null,
+  restaurantSelection:new Set(),
+  newRestaurantItems:[],
+  history:[
+    { id:90, restaurantName:'日式烤肉飯 南崬', initiator:'Mike Chen', date:'2026-06-25', people:4, total:654,
+      lines:[
+        ['烤牛肉飯(原味)','Tony Su',2,'$198'],
+        ['烤牛肉飯(泰式)','Mike Chen',1,'$99'],
+        ['烤牛雙拼飯(泰式)','Asa Wang',2,'$258'],
+        ['烤雞腿飯(原味)','Vincent Yu',1,'$99'],
+      ],
+      payments:[
+        {user:'Tony Su', total:198, paid:false},
+        {user:'Mike Chen', total:99, paid:true},
+        {user:'Asa Wang', total:258, paid:false},
+        {user:'Vincent Yu', total:99, paid:true},
+      ] },
+  ],
+  nextHistoryId:91,
+  historyExpanded:new Set(),
+  listSearchQuery:'', listTypeFilter:null,
+  voteSearchQuery:'', voteTypeFilter:null,
+  currentRestaurantMenuId:null,
+  editingRestaurantId:null, editingRestaurant:null,
+};
+
+/* ---------------- Time picker helpers ---------------- */
+const HOURS = Array.from({length:24}, (_,i)=>i);
+const MINUTES = [0,5,10,15,20,25,30,35,40,45,50,55];
+function hourOptionsHtml(sel){
+  return HOURS.map(h=>`<option value="${h}" ${h===sel?'selected':''}>${String(h).padStart(2,'0')}</option>`).join('');
+}
+function minuteOptionsHtml(sel){
+  return MINUTES.map(m=>`<option value="${m}" ${m===sel?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('');
+}
+function setDeadlinePickers(prefix, t){
+  document.getElementById(prefix+'Date').value = t.date;
+  document.getElementById(prefix+'Hour').innerHTML = hourOptionsHtml(t.hour);
+  document.getElementById(prefix+'Minute').innerHTML = minuteOptionsHtml(t.minute);
+}
+function readDeadlinePickers(prefix){
+  return {
+    date: document.getElementById(prefix+'Date').value,
+    hour: parseInt(document.getElementById(prefix+'Hour').value),
+    minute: parseInt(document.getElementById(prefix+'Minute').value)
+  };
+}
+function defaultDeadline(){
+  const d = new Date(Date.now() + 10*60000);
+  const hour = d.getHours();
+  const minute = MINUTES.reduce((best,m)=> Math.abs(m-d.getMinutes())<Math.abs(best-d.getMinutes()) ? m : best, MINUTES[0]);
+  const date = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return {date, hour, minute};
+}
+function formatDeadline(t){
+  const parts = (t.date||'').split('-').map(Number);
+  const y = parts[0], m = parts[1], da = parts[2];
+  return `${y}/${m}/${da} ${String(t.hour).padStart(2,'0')}:${String(t.minute).padStart(2,'0')}`;
+}
+
+/* ---------------- Generic Yes/No confirm modal ---------------- */
+let _pendingConfirmCallback = null;
+function confirmAction(message, cb){
+  document.getElementById('confirmMessage').textContent = message;
+  _pendingConfirmCallback = cb;
+  document.getElementById('confirmOverlay').classList.add('active');
+}
+function confirmYes(){
+  document.getElementById('confirmOverlay').classList.remove('active');
+  const cb = _pendingConfirmCallback;
+  _pendingConfirmCallback = null;
+  if(cb) cb();
+}
+function confirmNo(){
+  document.getElementById('confirmOverlay').classList.remove('active');
+  _pendingConfirmCallback = null;
+}
+
+/* ---------------- Navigation ---------------- */
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('.bottomnav button').forEach(b=>b.classList.remove('active'));
+  const map = {
+    home:'nav-home', orderDetail:'nav-home', voteDetail:'nav-home',
+    restaurantList:'nav-list', restaurantMenu:'nav-list', editRestaurant:'nav-list',
+    vote:'nav-vote',
+    more:'nav-more', history:'nav-more', createRestaurant:'nav-more'
+  };
+  if(map[name]) document.getElementById(map[name]).classList.add('active');
+  document.getElementById('topbarTitle').textContent = '訂餐統計';
+
+  if(name==='restaurantList') renderRestaurantNameCards();
+  if(name==='vote'){ renderVoteCheckList(); setDeadlinePickers('voteDeadline', defaultDeadline()); }
+  if(name==='history') renderHistory();
+  if(name==='createRestaurant'){ document.getElementById('newRType').innerHTML = CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join(''); }
+}
+function goHome(){ renderOrders(); renderVoteBatches(); showScreen('home'); }
+function goMore(){ showScreen('more'); }
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1500);
+}
+
+function mapUrl(r){
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(r.name+' '+r.addr);
+}
+function todayStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+/* ---------------- Search / type filter helpers ---------------- */
+function restaurantMatches(r, query, typeFilter){
+  if(typeFilter && r.type!==typeFilter) return false;
+  const q = (query||'').trim().toLowerCase();
+  if(!q) return true;
+  if(r.name.toLowerCase().includes(q)) return true;
+  return r.menu.some(m=>m.name.toLowerCase().includes(q));
+}
+function renderTypeFilterChips(containerId, activeType, onClickFnName){
+  document.getElementById(containerId).innerHTML = CATEGORIES.map(c=>
+    `<span class="type-chip ${activeType===c?'active':''}" onclick="${onClickFnName}('${c}')">${c}</span>`
+  ).join('');
+}
+function toggleListTypeFilter(t){ state.listTypeFilter = (state.listTypeFilter===t)? null : t; renderRestaurantNameCards(); }
+function toggleVoteTypeFilter(t){ state.voteTypeFilter = (state.voteTypeFilter===t)? null : t; renderVoteCheckList(); }
+function onListSearchInput(){ state.listSearchQuery = document.getElementById('listSearchInput').value; renderRestaurantNameCards(); }
+function onVoteSearchInput(){ state.voteSearchQuery = document.getElementById('voteSearchInput').value; renderVoteCheckList(); }
+
+/* ---------------- Username ---------------- */
+function saveUsername(){
+  state.username = document.getElementById('usernameInput').value.trim() || state.username;
+  toast('已儲存名稱:'+state.username);
+}
+
+/* ---------------- Home: Orders ---------------- */
+function renderOrders(){
+  const el = document.getElementById('ordersList');
+  if(state.orders.length===0){ el.innerHTML = '<div class="empty">目前沒有訂單</div>'; return; }
+  el.innerHTML = state.orders.map(o=>{
+    const r = restaurants.find(r=>r.id===o.restaurantId);
+    return `<div class="card order-card" onclick="openOrder(${o.id})">
+      <div><div class="name">訂單${o.id} · ${r?r.name:'未知餐廳'}</div><div class="sub">發起者:${o.initiator} 截止時間:${formatDeadline(o.deadline)}</div></div>
+      <div class="chevron">›</div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------------- Home: Vote batches ---------------- */
+function renderVoteBatches(){
+  const el = document.getElementById('voteBatchesList');
+  if(state.voteBatches.length===0){ el.innerHTML = '<div class="empty">目前沒有投票</div>'; return; }
+  el.innerHTML = state.voteBatches.map(b=>{
+    const names = b.candidates.map(id=>restaurants.find(r=>r.id===id).name).join('/');
+    return `<div class="card order-card" onclick="openVoteDetail(${b.id})">
+      <div><div class="name">投票${b.id} ${names}</div><div class="sub">發起者:${b.initiator} 截止時間:${formatDeadline(b.deadline)}</div></div>
+      <div class="chevron">›</div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------------- Restaurant List (browse) ---------------- */
+function renderRestaurantNameCards(){
+  renderTypeFilterChips('listTypeFilterRow', state.listTypeFilter, 'toggleListTypeFilter');
+  const filtered = restaurants.filter(r=>restaurantMatches(r, state.listSearchQuery, state.listTypeFilter));
+  const el = document.getElementById('restaurantNameCards');
+  if(filtered.length===0){ el.innerHTML = '<div class="empty">找不到符合的餐廳</div>'; return; }
+  el.innerHTML = filtered.map(r=>`
+    <div class="card order-card" onclick="openRestaurantMenu(${r.id})">
+      <div><div class="name">${r.name}</div><div class="sub">${r.type} · ${r.addr||''}</div></div>
+      <div class="chevron">›</div>
+    </div>`).join('');
+}
+
+function flavorStr(item){
+  const groups = item.options.filter(g=>g.type==='radio');
+  if(!groups.length) return '無';
+  return groups.map(g=>g.choices.map(c=>c[0]).join('/')).join(' | ');
+}
+function addonStr(item){
+  const groups = item.options.filter(g=>g.type==='checkbox');
+  if(!groups.length) return '無';
+  return groups.map(g=>g.choices.map(c=> c[0] + (c[1]?c[1]:'') ).join('/')).join(' | ');
+}
+function renderPhotoSlide(p){
+  if(p.dataUrl) return `<div class="carousel-slide"><img src="${p.dataUrl}"><span class="cap">${p.label||''}</span></div>`;
+  return `<div class="carousel-slide" style="background:${p.color||'#999'};"><span>${p.emoji||'📷'}</span><span class="cap">${p.label||''}</span></div>`;
+}
+function openRestaurantMenu(id){
+  const r = restaurants.find(r=>r.id===id);
+  state.currentRestaurantMenuId = id;
+  document.getElementById('restaurantMenuTitle').textContent = r.name;
+
+  const menuHtml = r.menu.length ? `
+    <table class="stat-table wide">
+      <tr><th>品項名稱</th><th>口味</th><th>加購</th><th>金額</th></tr>
+      ${r.menu.map(m=>`<tr><td>${m.name}</td><td>${flavorStr(m)}</td><td>${addonStr(m)}</td><td>$${m.price}</td></tr>`).join('')}
+    </table>` : '<div class="empty">此餐廳尚未建立菜單</div>';
+
+  const photosHtml = (r.photos||[]).map(renderPhotoSlide).join('');
+
+  const galleryHtml = `
+    <div class="menu-cat">餐廳照片</div>
+    <div class="carousel">
+      <div class="carousel-track" id="menuCarouselTrack">${photosHtml || '<div class="carousel-slide" style="background:#999;">📷</div>'}</div>
+      <button class="carousel-arrow left" onclick="scrollCarousel(-1)">‹</button>
+      <button class="carousel-arrow right" onclick="scrollCarousel(1)">›</button>
+    </div>
+    <div class="menu-cat">餐廳資訊</div>
+    <div class="card">
+      <div class="info-row"><span class="lbl">類型</span><span>${r.type}</span></div>
+      <div class="info-row"><span class="lbl">地址</span><span>${r.addr}</span></div>
+      <div class="info-row"><span class="lbl">電話</span><span>${r.phone}</span></div>
+    </div>
+    <a class="btn btn-secondary btn-full" href="${mapUrl(r)}" target="_blank">📍 在 Google Maps 開啟</a>
+  `;
+
+  document.getElementById('restaurantMenuContent').innerHTML = menuHtml + galleryHtml;
+  showScreen('restaurantMenu');
+}
+function scrollCarousel(dir){
+  const track = document.getElementById('menuCarouselTrack');
+  if(!track) return;
+  track.scrollBy({left: dir*track.clientWidth, behavior:'smooth'});
+}
+
+/* ---------------- Edit Restaurant ---------------- */
+function openEditRestaurant(id){
+  const original = restaurants.find(r=>r.id===id);
+  if(!original) return;
+  state.editingRestaurantId = id;
+  state.editingRestaurant = JSON.parse(JSON.stringify(original));
+  document.getElementById('editRName').value = state.editingRestaurant.name;
+  document.getElementById('editRPhone').value = state.editingRestaurant.phone;
+  document.getElementById('editRAddr').value = state.editingRestaurant.addr;
+  document.getElementById('editRType').innerHTML = CATEGORIES.map(c=>`<option value="${c}" ${c===state.editingRestaurant.type?'selected':''}>${c}</option>`).join('');
+  renderEditPhotoList();
+  renderEditItemRows();
+  showScreen('editRestaurant');
+}
+function cancelEditRestaurant(){
+  const id = state.editingRestaurantId;
+  state.editingRestaurant = null;
+  openRestaurantMenu(id);
+}
+function renderEditPhotoList(){
+  const el = document.getElementById('editPhotoList');
+  const photos = state.editingRestaurant.photos || [];
+  if(!photos.length){ el.innerHTML = '<div class="empty">尚未上傳照片</div>'; return; }
+  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;">` + photos.map((p,i)=>{
+    const thumb = p.dataUrl
+      ? `<img src="${p.dataUrl}">`
+      : `<div class="ph-ph" style="background:${p.color||'#999'};">${p.emoji||'📷'}</div>`;
+    return `<div class="photo-thumb">${thumb}<span class="ph-rm" onclick="removeEditPhoto(${i})">×</span></div>`;
+  }).join('') + `</div>`;
+}
+function triggerUploadPhoto(){ document.getElementById('editPhotoInput').click(); }
+function handlePhotoUpload(e){
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    state.editingRestaurant.photos.push({dataUrl: ev.target.result, label: file.name});
+    renderEditPhotoList();
+    toast('已加入圖片');
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+function removeEditPhoto(i){
+  confirmAction('確定要刪除這張圖片嗎?', ()=>{
+    state.editingRestaurant.photos.splice(i,1);
+    renderEditPhotoList();
+    toast('已刪除圖片');
+  });
+}
+function renderEditItemRows(){
+  const el = document.getElementById('editItemRows');
+  const items = state.editingRestaurant.menu || [];
+  if(!items.length){ el.innerHTML = '<div class="empty">尚未新增品項</div>'; return; }
+  el.innerHTML = items.map((it,i)=>`
+    <div class="item-row">
+      <div class="item-row-head">
+        <strong style="font-size:13px;">品項 ${i+1}</strong>
+        <span class="rm" onclick="removeEditMenuItemRow(${i})">刪除</span>
+      </div>
+      <div class="form-group"><label>名稱</label><input value="${it.name}" oninput="state.editingRestaurant.menu[${i}].name=this.value"></div>
+      <div class="form-group"><label>價格</label><input type="number" value="${it.price}" oninput="state.editingRestaurant.menu[${i}].price=parseInt(this.value)||0"></div>
+    </div>
+  `).join('');
+}
+function addEditMenuItemRow(){
+  state.editingRestaurant.menu.push({id: Date.now(), name:'', price:0, options:[]});
+  renderEditItemRows();
+}
+function removeEditMenuItemRow(i){
+  state.editingRestaurant.menu.splice(i,1);
+  renderEditItemRows();
+}
+function saveEditRestaurant(){
+  const draft = state.editingRestaurant;
+  draft.name = document.getElementById('editRName').value.trim() || draft.name;
+  draft.phone = document.getElementById('editRPhone').value;
+  draft.addr = document.getElementById('editRAddr').value;
+  draft.type = document.getElementById('editRType').value;
+  const idx = restaurants.findIndex(r=>r.id===draft.id);
+  if(idx>-1) restaurants[idx] = draft;
+  const id = draft.id;
+  state.editingRestaurant = null;
+  toast('餐廳資料已更新');
+  openRestaurantMenu(id);
+}
+
+/* ---------------- Order & Vote screen: select candidates ---------------- */
+function renderVoteCheckList(){
+  renderTypeFilterChips('voteTypeFilterRow', state.voteTypeFilter, 'toggleVoteTypeFilter');
+  const filtered = restaurants.filter(r=>restaurantMatches(r, state.voteSearchQuery, state.voteTypeFilter));
+  const el = document.getElementById('voteRestaurantCheckList');
+  if(filtered.length===0){ el.innerHTML = '<div class="empty">找不到符合的餐廳</div>'; updateRestaurantActionBtn(); return; }
+  el.innerHTML = filtered.map(r=>`
+    <label class="checkbox-item">
+      <input type="checkbox" ${state.restaurantSelection.has(r.id)?'checked':''} onchange="toggleRestaurantSel(${r.id}, this.checked)">
+      <span class="cname">${r.name} <span style="color:var(--muted);font-weight:400;font-size:11px;">(${r.type})</span></span>
+    </label>`).join('');
+  updateRestaurantActionBtn();
+}
+function toggleRestaurantSel(id, checked){
+  if(checked) state.restaurantSelection.add(id); else state.restaurantSelection.delete(id);
+  updateRestaurantActionBtn();
+}
+function updateRestaurantActionBtn(){
+  const btn = document.getElementById('voteActionBtn');
+  const n = state.restaurantSelection.size;
+  if(n===0){ btn.disabled=true; btn.textContent='請選擇餐廳'; }
+  else if(n===1){ btn.disabled=false; btn.textContent='立即開出訂單'; }
+  else { btn.disabled=false; btn.textContent='進行餐廳投票'; }
+}
+function handleRestaurantAction(){
+  const ids = Array.from(state.restaurantSelection);
+  const deadline = readDeadlinePickers('voteDeadline');
+  if(ids.length===1){
+    const order = { id:state.nextOrderId++, restaurantId:ids[0], initiator:state.username, deadline, items:[] };
+    state.orders.push(order);
+    state.restaurantSelection.clear();
+    toast('已開出訂單');
+    openOrder(order.id);
+  } else if(ids.length>1){
+    const batch = { id:state.nextVoteId++, candidates:ids, initiator:state.username, deadline, otherLocked:{}, mySelection:null, myLocked:false };
+    state.voteBatches.push(batch);
+    state.restaurantSelection.clear();
+    toast('已建立投票');
+    goHome();
+  }
+}
+
+/* ---------------- Vote Detail: Save / Edit / 開票 / 刪除 ---------------- */
+function openVoteDetail(id){
+  state.currentVoteId = id;
+  const b = state.voteBatches.find(v=>v.id===id);
+  const isInitiator = state.username===b.initiator;
+  document.getElementById('voteDetailTitle').textContent = '投票'+id;
+  document.getElementById('voteInitiatorActions').style.display = isInitiator ? 'flex' : 'none';
+  document.getElementById('voteDetailDeadlineView').style.display = isInitiator ? 'none' : 'flex';
+  document.getElementById('voteDetailDeadlineEdit').style.display = isInitiator ? 'flex' : 'none';
+  document.getElementById('voteDetailDeadlineText').textContent = formatDeadline(b.deadline);
+  if(isInitiator) setDeadlinePickers('voteEdit', b.deadline);
+  renderVoteDetailList();
+  showScreen('voteDetail');
+}
+function saveVoteDeadline(){
+  const b = state.voteBatches.find(v=>v.id===state.currentVoteId);
+  b.deadline = readDeadlinePickers('voteEdit');
+  document.getElementById('voteDetailDeadlineText').textContent = formatDeadline(b.deadline);
+  toast('已更新截止時間');
+}
+function renderVoteDetailList(){
+  const b = state.voteBatches.find(v=>v.id===state.currentVoteId);
+  const el = document.getElementById('voteDetailList');
+  el.innerHTML = b.candidates.map(rid=>{
+    const r = restaurants.find(r=>r.id===rid);
+    const checked = b.mySelection===rid;
+    const count = (b.otherLocked[r.name]||0) + ((b.myLocked && b.mySelection===rid) ? 1 : 0);
+    return `<label class="vote-item ${b.myLocked?'locked':''}">
+      <input type="radio" name="voteDetailChoice" value="${rid}" ${checked?'checked':''} ${b.myLocked?'disabled':''} onchange="setVoteDetailSelection(${rid})">
+      <span class="vname">${r.name}</span>
+      <span class="vcount">${count} 票</span>
+    </label>`;
+  }).join('');
+
+  const btn = document.getElementById('voteDetailSaveBtn');
+  if(b.myLocked){ btn.textContent='Edit'; btn.onclick = handleVoteDetailEdit; }
+  else { btn.textContent='Save'; btn.onclick = handleVoteDetailSave; }
+}
+function setVoteDetailSelection(rid){
+  const b = state.voteBatches.find(v=>v.id===state.currentVoteId);
+  b.mySelection = rid;
+}
+function handleVoteDetailSave(){
+  const b = state.voteBatches.find(v=>v.id===state.currentVoteId);
+  if(!b.mySelection){ toast('請先選擇一家餐廳'); return; }
+  b.myLocked = true;
+  renderVoteDetailList();
+  toast('已鎖定投票');
+}
+function handleVoteDetailEdit(){
+  const b = state.voteBatches.find(v=>v.id===state.currentVoteId);
+  b.myLocked = false;
+  renderVoteDetailList();
+  toast('已解鎖,可重新選擇,再次 Save 才會覆寫');
+}
+function handleOpenVote(){
+  const b = state.voteBatches.find(v=>v.id===state.currentVoteId);
+  let winner = b.candidates[0], maxCount = -1;
+  b.candidates.forEach(rid=>{
+    const r = restaurants.find(r=>r.id===rid);
+    const count = (b.otherLocked[r.name]||0) + ((b.myLocked && b.mySelection===rid) ? 1 : 0);
+    if(count > maxCount){ maxCount = count; winner = rid; }
+  });
+  // 開票後,依票數最高的餐廳觸發「立即開出訂單」同一套建單邏輯,截止時間沿用投票的截止時間
+  const order = { id:state.nextOrderId++, restaurantId:winner, initiator:state.username, deadline: b.deadline, items:[] };
+  state.orders.push(order);
+  state.voteBatches = state.voteBatches.filter(v=>v.id!==b.id);
+  toast('已開票,已建立訂單');
+  openOrder(order.id);
+}
+function handleDeleteVote(){
+  state.voteBatches = state.voteBatches.filter(v=>v.id!==state.currentVoteId);
+  toast('已刪除投票');
+  goHome();
+}
+
+/* ---------------- Order Detail ---------------- */
+function openOrder(orderId){
+  state.currentOrderId = orderId;
+  state.cart = [];
+  const order = state.orders.find(o=>o.id===orderId);
+  const r = restaurants.find(r=>r.id===order.restaurantId);
+  const isInitiator = state.username===order.initiator;
+  document.getElementById('orderDetailTitle').textContent = r.name;
+  document.getElementById('orderInitiatorActions').style.display = isInitiator ? 'flex' : 'none';
+  document.getElementById('orderDetailDeadlineView').style.display = isInitiator ? 'none' : 'flex';
+  document.getElementById('orderDetailDeadlineEdit').style.display = isInitiator ? 'flex' : 'none';
+  document.getElementById('orderDetailDeadlineText').textContent = formatDeadline(order.deadline);
+  if(isInitiator) setDeadlinePickers('orderEdit', order.deadline);
+  document.getElementById('orderMapLink').href = mapUrl(r);
+
+  document.getElementById('menuList').innerHTML = r.menu.map(m=>`
+    <div class="menu-item" onclick="openItemSheet(${order.restaurantId},${m.id})">
+      <div><div class="mi-name">${m.name}</div><div class="mi-price">$${m.price}</div></div>
+      <div class="plus-badge">+</div>
+    </div>
+  `).join('');
+
+  renderCart();
+  renderStatTable(order);
+  showScreen('orderDetail');
+}
+function saveOrderDeadline(){
+  const order = state.orders.find(o=>o.id===state.currentOrderId);
+  order.deadline = readDeadlinePickers('orderEdit');
+  document.getElementById('orderDetailDeadlineText').textContent = formatDeadline(order.deadline);
+  toast('已更新截止時間');
+}
+
+function openItemSheet(restaurantId, menuId){
+  const r = restaurants.find(r=>r.id===restaurantId);
+  const m = r.menu.find(m=>m.id===menuId);
+  const sheet = document.getElementById('sheet');
+
+  let optHtml = m.options.map((g,gi)=>`
+    <div class="opt-group-title">${g.group}${g.type==='radio'?'(單選)':'(可多選)'}</div>
+    ${g.choices.map((c,ci)=>`
+      <label class="opt-choice">
+        <input type="${g.type}" name="grp${gi}" value="${ci}" ${g.type==='radio'&&ci===0?'checked':''}>
+        ${c[0]}${c[1]?` (+$${c[1]})`:''}
+      </label>
+    `).join('')}
+  `).join('');
+
+  sheet.innerHTML = `
+    <h3>${m.name}</h3>
+    <div class="price">$${m.price} 起</div>
+    ${optHtml || '<div class="empty" style="text-align:left;padding:4px 0;">此品項無客製選項</div>'}
+    <div class="qty-row">
+      <span style="font-size:13px;color:var(--muted);">數量</span>
+      <div class="qty-ctrl">
+        <button onclick="stepQty(-1)">−</button>
+        <span id="qtyVal">1</span>
+        <button onclick="stepQty(1)">+</button>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" onclick="closeSheet()">取消</button>
+      <button class="btn btn-primary" onclick="addToCart(${restaurantId},${menuId})">加入我的訂單</button>
+    </div>
+  `;
+  window._qty = 1;
+  document.getElementById('overlay').classList.add('active');
+}
+function stepQty(d){
+  window._qty = Math.max(1, (window._qty||1)+d);
+  document.getElementById('qtyVal').textContent = window._qty;
+}
+function closeSheet(){ document.getElementById('overlay').classList.remove('active'); }
+
+function addToCart(restaurantId, menuId){
+  const r = restaurants.find(r=>r.id===restaurantId);
+  const m = r.menu.find(m=>m.id===menuId);
+  const sheet = document.getElementById('sheet');
+  let chosen = []; let extra = 0;
+  m.options.forEach((g,gi)=>{
+    sheet.querySelectorAll(`[name="grp${gi}"]:checked`).forEach(inp=>{
+      const c = g.choices[parseInt(inp.value)];
+      chosen.push(c[0]); extra += c[1];
+    });
+  });
+  state.cart.push({ menuId:m.id, name:m.name, opts:chosen, extra, qty:window._qty, unit:m.price, user:state.username });
+  closeSheet();
+  renderCart();
+  const order = state.orders.find(o=>o.id===state.currentOrderId);
+  renderStatTable(order);
+  toast('已加入我的訂單');
+}
+
+function renderCart(){
+  const el = document.getElementById('myCart');
+  if(state.cart.length===0){ el.innerHTML='<div class="empty">尚未選擇品項</div>'; document.getElementById('cartTotal').textContent='$0'; return; }
+  let total=0;
+  el.innerHTML = state.cart.map((c,i)=>{
+    const lineTotal = (c.unit+c.extra)*c.qty;
+    total += lineTotal;
+    return `<div class="cart-line">
+      <span>${c.name}${c.opts.length?` (${c.opts.join('/')})`:''} × ${c.qty}</span>
+      <span>$${lineTotal} <span class="rm" onclick="removeCartLine(${i})">移除</span></span>
+    </div>`;
+  }).join('');
+  document.getElementById('cartTotal').textContent = '$'+total;
+}
+function removeCartLine(i){
+  state.cart.splice(i,1); renderCart();
+  const order = state.orders.find(o=>o.id===state.currentOrderId);
+  renderStatTable(order);
+}
+
+/* ---------------- Everyone's totals table (with soft-delete for initiator) ---------------- */
+function renderStatTable(order){
+  let rowsHtml = '';
+  order.items.forEach((it, idx)=>{
+    const label = it.name + (it.opts && it.opts.length ? '('+it.opts.join('/')+')' : '');
+    const amount = (it.unit + (it.extra||0)) * it.qty;
+    const canDelete = !it.deleted && state.username===order.initiator && it.user!==state.username;
+    const rowStyle = it.deleted ? ' style="opacity:.5;text-decoration:line-through;"' : '';
+    const delLink = canDelete ? ` <span class="rm" onclick="handleDeleteOtherItem(${order.id},${idx})">刪除</span>` : '';
+    rowsHtml += `<tr${rowStyle}><td>${label}</td><td>${it.user}</td><td>${it.qty}</td><td>$${amount}${delLink}</td></tr>`;
+  });
+  state.cart.forEach(c=>{
+    const label = c.name + (c.opts && c.opts.length ? '('+c.opts.join('/')+')' : '');
+    const amount = (c.unit + (c.extra||0)) * c.qty;
+    rowsHtml += `<tr><td>${label}</td><td>${c.user}</td><td>${c.qty}</td><td>$${amount}</td></tr>`;
+  });
+  document.getElementById('statTable').innerHTML = `<tr><th>品項 / 選項</th><th>人員</th><th>數量</th><th>金額</th></tr>${rowsHtml || '<tr><td colspan=4 style="color:var(--muted);">尚無資料</td></tr>'}`;
+}
+function handleDeleteOtherItem(orderId, idx){
+  const order = state.orders.find(o=>o.id===orderId);
+  const it = order.items[idx];
+  confirmAction(`確定要刪除 ${it.user} 的「${it.name}」嗎?(將以刪除線標示,不會真正移除記錄)`, ()=>{
+    it.deleted = true;
+    renderStatTable(order);
+    toast('已刪除該筆品項(以刪除線標示)');
+  });
+}
+
+function buildOrderStatGroups(order){
+  // 結單彙總時排除已被發起者刪除(刪除線)的品項
+  const activeItems = order.items.filter(it=>!it.deleted);
+  const all = [...activeItems, ...state.cart.map(c=>({name:c.name, opts:c.opts, extra:c.extra, qty:c.qty, unit:c.unit, user:c.user}))];
+  const groups = {};
+  all.forEach(it=>{
+    const label = it.name + (it.opts&&it.opts.length? '('+it.opts.join('/')+')':'');
+    const key = label+'|'+it.user;
+    if(!groups[key]) groups[key] = {label, user:it.user, qty:0, amount:0};
+    groups[key].qty += it.qty;
+    groups[key].amount += (it.unit + (it.extra||0)) * it.qty;
+  });
+  return Object.values(groups);
+}
+
+function handleCloseOrder(){
+  const order = state.orders.find(o=>o.id===state.currentOrderId);
+  const r = restaurants.find(r=>r.id===order.restaurantId);
+  const groups = buildOrderStatGroups(order);
+  const lines = groups.map(v=>[v.label, v.user, v.qty, '$'+v.amount]);
+  const total = groups.reduce((s,v)=>s+v.amount,0);
+  const byUser = {};
+  groups.forEach(v=>{ byUser[v.user] = (byUser[v.user]||0) + v.amount; });
+  const payments = Object.entries(byUser).map(([user,amt])=>({user, total:amt, paid:false}));
+  const people = payments.length;
+  state.history.push({ id:state.nextHistoryId++, restaurantName:r.name, initiator:order.initiator, date:todayStr(), people, total, lines, payments });
+  state.orders = state.orders.filter(o=>o.id!==order.id);
+  toast('已結單,轉入歷史訂單');
+  goHome();
+}
+function handleDeleteOrder(){
+  state.orders = state.orders.filter(o=>o.id!==state.currentOrderId);
+  toast('已刪除訂單');
+  goHome();
+}
+
+/* ---------------- Create Restaurant ---------------- */
+function addMenuItemRow(){
+  const id = 'row'+Date.now();
+  state.newRestaurantItems.push({rowId:id, name:'', price:'', optGroups:[]});
+  renderNewItemRows();
+}
+function renderNewItemRows(){
+  const el = document.getElementById('newItemRows');
+  if(state.newRestaurantItems.length===0){ el.innerHTML = '<div class="empty">尚未新增品項,點右上「+ 新增品項」</div>'; return; }
+  el.innerHTML = state.newRestaurantItems.map((it,i)=>`
+    <div class="item-row">
+      <div class="item-row-head">
+        <strong style="font-size:13px;">品項 ${i+1}</strong>
+        <span class="rm" onclick="removeItemRow(${i})">刪除</span>
+      </div>
+      <div class="form-group"><label>名稱</label><input value="${it.name}" oninput="state.newRestaurantItems[${i}].name=this.value"></div>
+      <div class="form-group"><label>價格</label><input type="number" value="${it.price}" oninput="state.newRestaurantItems[${i}].price=this.value"></div>
+      <div>
+        ${it.optGroups.map(g=>`<span class="opt-chip">${g}</span>`).join('')}
+        <span onclick="addOptGroup(${i})" style="font-size:12px;color:var(--brand);cursor:pointer;display:inline-block;margin-top:6px;">+ 新增客製選項群組</span>
+      </div>
+    </div>
+  `).join('');
+}
+function removeItemRow(i){ state.newRestaurantItems.splice(i,1); renderNewItemRows(); }
+function addOptGroup(i){
+  const g = prompt('輸入選項群組,例如: 口味:原味,泰式,五辣');
+  if(g) { state.newRestaurantItems[i].optGroups.push(g); renderNewItemRows(); }
+}
+function submitNewRestaurant(){
+  const name = document.getElementById('newRName').value.trim();
+  if(!name){ toast('請輸入餐廳名稱'); return; }
+  const newId = Math.max(...restaurants.map(r=>r.id))+1;
+  restaurants.push({
+    id:newId, name,
+    type: document.getElementById('newRType').value,
+    phone:document.getElementById('newRPhone').value,
+    addr:document.getElementById('newRAddr').value,
+    photos:[],
+    menu: state.newRestaurantItems.map((it,i)=>({
+      id:newId*1000+i, name:it.name||'未命名品項', price:parseInt(it.price)||0, options:[]
+    }))
+  });
+  state.newRestaurantItems = [];
+  document.getElementById('newRName').value='';
+  document.getElementById('newRPhone').value='';
+  document.getElementById('newRAddr').value='';
+  renderNewItemRows();
+  toast('餐廳已建立:'+name);
+  goMore();
+}
+
+/* ---------------- History ---------------- */
+function renderHistory(){
+  const el = document.getElementById('historyList');
+  el.innerHTML = state.history.map(h=>{
+    const isOpen = state.historyExpanded.has(h.id);
+    const isInitiator = state.username===h.initiator;
+    const paidCount = h.payments.filter(p=>p.paid).length;
+    return `<div class="card history-card ${isOpen?'open':''}" id="hist-${h.id}">
+      <div class="hc-head" onclick="toggleHistory(${h.id})">
+        <div><div class="name" style="font-weight:600;font-size:14px;">${h.restaurantName}</div>
+          <div class="sub" style="font-size:12px;color:var(--muted);">${h.date} · 發起者:${h.initiator} · ${h.people}人 · 共 $${h.total} · 已收款 ${paidCount}/${h.payments.length}</div>
+        </div>
+        <div class="chevron">▾</div>
+      </div>
+      <div class="hc-detail">
+        <table class="stat-table wide">
+          <tr><th>品項</th><th>人員</th><th>數量</th><th>金額</th></tr>
+          ${h.lines.map(l=>`<tr><td>${l[0]}</td><td>${l[1]}</td><td>${l[2]}</td><td>${l[3]}</td></tr>`).join('')}
+        </table>
+        <div class="menu-cat" style="margin-top:10px;">收款狀態(${paidCount}/${h.payments.length} 人)</div>
+        ${h.payments.map((p,pi)=>`
+          <label class="payment-row">
+            <input type="checkbox" ${p.paid?'checked':''} ${isInitiator?'':'disabled'} onchange="togglePayment(${h.id},${pi})">
+            <span class="puser">${p.user}</span>
+            <span class="pamt">$${p.total}</span>
+          </label>
+        `).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleHistory(id){
+  if(state.historyExpanded.has(id)) state.historyExpanded.delete(id);
+  else state.historyExpanded.add(id);
+  renderHistory();
+}
+function togglePayment(historyId, idx){
+  const h = state.history.find(x=>x.id===historyId);
+  if(!h || state.username!==h.initiator) return;
+  h.payments[idx].paid = !h.payments[idx].paid;
+  renderHistory();
+  toast(h.payments[idx].paid ? '已標記收款' : '已取消收款標記');
+}
+
+/* ---------------- Init ---------------- */
+renderOrders();
+renderVoteBatches();
+</script>
+</body>
+</html>

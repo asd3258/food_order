@@ -1,0 +1,56 @@
+# Food-order app stack. Designed to sit alongside the user's existing
+# sit_web_system / gitea / jenkins containers on the same x86 VM — just give
+# each service a distinct container_name / port / volume so nothing collides.
+
+services:
+  food_order_db:
+    image: postgres:14
+    container_name: food_order_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: food_order
+      POSTGRES_PASSWORD: food_order   # CHANGE_ME before deploying
+      POSTGRES_DB: food_order
+    volumes:
+      - food_order_db_data:/var/lib/postgresql/data
+    ports:
+      - "55432:5432"   # host port kept unusual to avoid clashing with sit_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U food_order -d food_order"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  food_order_api:
+    build: ./backend
+    container_name: food_order_api
+    restart: unless-stopped
+    depends_on:
+      food_order_db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://food_order:food_order@food_order_db:5432/food_order
+      CORS_ORIGINS: http://localhost:5173,http://mike1-virtual-machine:55173
+    ports:
+      - "58000:8000"
+    command: >
+      sh -c "python -m app.seed; uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  food_order_web:
+    build:
+      context: ./frontend
+      args:
+        # Vite bakes this in at build time -- it must be reachable from the
+        # *browser* (phone/PC), so use the VM's LAN/Tailscale hostname + the
+        # API's host port, not the internal Docker service name.
+        VITE_API_BASE: http://mike1-virtual-machine:58000
+    container_name: food_order_web
+    restart: unless-stopped
+    depends_on:
+      - food_order_api
+    ports:
+      - "55173:80"
+
+volumes:
+  food_order_db_data:
