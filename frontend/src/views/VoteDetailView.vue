@@ -39,8 +39,14 @@ async function save() {
   toast('已鎖定投票')
   load()
 }
-function edit() {
-  if (batch.value) batch.value.my_locked = false
+async function edit() {
+  // v0.5 behavior change: Edit now immediately clears the saved choice
+  // (rather than just unlocking the radios while keeping the old pick) --
+  // the vote stops counting toward the tally right away, and the user must
+  // pick again and press Save to be counted.
+  await api.clearMyChoice(batchId, userStore.username)
+  toast('已清除您的選擇,請重新選擇並按 Save')
+  load()
 }
 
 async function tally() {

@@ -5,18 +5,49 @@ import { api, RESTAURANT_TYPES } from '../api'
 import { userStore } from '../stores/user'
 import { toast } from '../stores/toast'
 
+interface OptionGroupDraft {
+  group: string // e.g. "口味" / "加購"
+  type: 'radio' | 'checkbox' // 單選(口味) | 可多選(加購)
+  choicesText: string // e.g. "原味,泰式,五辣" or "白飯加量+20,半熟蛋+15"
+}
+interface ItemDraft {
+  name: string
+  price: number
+  optionGroups: OptionGroupDraft[]
+}
+
 const router = useRouter()
 const name = ref('')
 const phone = ref('')
 const address = ref('')
 const type = ref(RESTAURANT_TYPES[0])
-const items = ref<{ name: string; price: number }[]>([])
+const items = ref<ItemDraft[]>([])
 
 function addItemRow() {
-  items.value.push({ name: '', price: 0 })
+  items.value.push({ name: '', price: 0, optionGroups: [] })
 }
 function removeItemRow(i: number) {
   items.value.splice(i, 1)
+}
+function addOptionGroup(i: number) {
+  items.value[i].optionGroups.push({ group: '口味', type: 'radio', choicesText: '' })
+}
+function removeOptionGroup(i: number, gi: number) {
+  items.value[i].optionGroups.splice(gi, 1)
+}
+
+// "原味,泰式,五辣" -> 3 choices, extra_price 0
+// "白飯加量+20,半熟蛋+15,去冰" -> 去冰 also extra_price 0 (no "+數字" suffix)
+function parseChoices(text: string): { option_name: string; extra_price: number }[] {
+  return text
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const m = entry.match(/^(.+?)\+(\d+)$/)
+      if (m) return { option_name: m[1].trim(), extra_price: parseInt(m[2], 10) }
+      return { option_name: entry, extra_price: 0 }
+    })
 }
 
 async function submit() {
@@ -30,7 +61,18 @@ async function submit() {
     address: address.value,
     type: type.value,
     created_by: userStore.username,
-    menu_items: items.value.map((it) => ({ name: it.name || '未命名品項', price: it.price || 0, options: [] })),
+    menu_items: items.value.map((it) => ({
+      name: it.name || '未命名品項',
+      price: it.price || 0,
+      options: it.optionGroups.flatMap((g) =>
+        parseChoices(g.choicesText).map((c) => ({
+          option_group: g.group || '選項',
+          option_type: g.type,
+          option_name: c.option_name,
+          extra_price: c.extra_price,
+        })),
+      ),
+    })),
   })
   toast('餐廳已建立:' + name.value)
   router.push('/more')
@@ -75,6 +117,37 @@ async function submit() {
       </div>
       <div class="form-group"><label>名稱</label><input v-model="it.name" /></div>
       <div class="form-group"><label>價格</label><input v-model.number="it.price" type="number" /></div>
+
+      <div style="margin-top:8px;">
+        <div
+          v-for="(g, gi) in it.optionGroups"
+          :key="gi"
+          style="background:#f7f7fb;border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;"
+        >
+          <div class="item-row-head" style="margin-bottom:6px;">
+            <strong style="font-size:12px;color:var(--muted);">選項群組 {{ gi + 1 }}</strong>
+            <span class="rm" @click="removeOptionGroup(i, gi)">刪除群組</span>
+          </div>
+          <div class="form-group">
+            <label>群組名稱(例:口味 / 加購)</label>
+            <input v-model="g.group" placeholder="口味" />
+          </div>
+          <div class="form-group">
+            <label>選擇方式</label>
+            <select v-model="g.type">
+              <option value="radio">單選(例如口味)</option>
+              <option value="checkbox">可多選(例如加購)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>選項內容(用逗號分開;要加價的用「名稱+金額」,例:白飯加量+20)</label>
+            <input v-model="g.choicesText" placeholder="原味,泰式,五辣" />
+          </div>
+        </div>
+        <span style="color:var(--brand);font-weight:600;cursor:pointer;font-size:13px;" @click="addOptionGroup(i)">
+          + 新增選項群組(口味/加購)
+        </span>
+      </div>
     </div>
   </section>
 

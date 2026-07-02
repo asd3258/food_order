@@ -1,9 +1,21 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api, RESTAURANT_TYPES, type RestaurantDetail } from '../api'
+import { api, RESTAURANT_TYPES, type RestaurantDetail, type MenuItem } from '../api'
 import { confirmAction } from '../stores/confirm'
 import { toast } from '../stores/toast'
+
+interface OptionGroupDraft {
+  group: string
+  type: 'radio' | 'checkbox'
+  choicesText: string
+}
+interface ItemDraft {
+  id?: number
+  name: string
+  price: number
+  optionGroups: OptionGroupDraft[]
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -14,8 +26,35 @@ const phone = ref('')
 const address = ref('')
 const type = ref(RESTAURANT_TYPES[0])
 const photos = ref<{ id?: number; image_url: string; caption: string; isNew?: boolean }[]>([])
-const items = ref<{ id?: number; name: string; price: number }[]>([])
+const items = ref<ItemDraft[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
+
+// Turn the flat MenuItemOption[] the backend returns back into editable
+// group rows -- inverse of parseChoices() below. Groups are kept in the
+// order their first option appeared.
+function groupsFromMenuItem(m: MenuItem): OptionGroupDraft[] {
+  const order: string[] = []
+  const byGroup: Record<string, { type: 'radio' | 'checkbox'; choices: string[] }> = {}
+  for (const o of m.options) {
+    if (!byGroup[o.option_group]) {
+      byGroup[o.option_group] = { type: o.option_type as 'radio' | 'checkbox', choices: [] }
+      order.push(o.option_group)
+    }
+    byGroup[o.option_group].choices.push(o.extra_price ? `${o.option_name}+${o.extra_price}` : o.option_name)
+  }
+  return order.map((group) => ({ group, type: byGroup[group].type, choicesText: byGroup[group].choices.join(',') }))
+}
+function parseChoices(text: string): { option_name: string; extra_price: number }[] {
+  return text
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const m = entry.match(/^(.+?)\+(\d+)$/)
+      if (m) return { option_name: m[1].trim(), extra_price: parseInt(m[2], 10) }
+      return { option_name: entry, extra_price: 0 }
+    })
+}
 
 async function load() {
   const r: RestaurantDetail = await api.getRestaurantMenu(restaurantId)
@@ -24,7 +63,7 @@ async function load() {
   address.value = r.address
   type.value = r.type
   photos.value = r.photos.map((p) => ({ id: p.id, image_url: p.image_url, caption: p.caption }))
-  items.value = r.menu_items.map((m) => ({ id: m.id, name: m.name, price: m.price }))
+  items.value = r.menu_items.map((m) => ({ id: m.id, name: m.name, price: m.price, optionGroups: groupsFromMenuItem(m) }))
 }
 onMounted(load)
 
@@ -55,10 +94,16 @@ async function removePhoto(index: number) {
 }
 
 function addItemRow() {
-  items.value.push({ name: '', price: 0 })
+  items.value.push({ name: '', price: 0, optionGroups: [] })
 }
 function removeItemRow(index: number) {
   items.value.splice(index, 1)
+}
+function addOptionGroup(i: number) {
+  items.value[i].optionGroups.push({ group: '口味', type: 'radio', choicesText: '' })
+}
+function removeOptionGroup(i: number, gi: number) {
+  items.value[i].optionGroups.splice(gi, 1)
 }
 
 async function save() {
@@ -67,7 +112,18 @@ async function save() {
     phone: phone.value,
     address: address.value,
     type: type.value,
-    menu_items: items.value.map((it) => ({ name: it.name, price: it.price, options: [] })),
+    menu_items: items.value.map((it) => ({
+      name: it.name,
+      price: it.price,
+      options: it.optionGroups.flatMap((g) =>
+        parseChoices(g.choicesText).map((c) => ({
+          option_group: g.group || '選項',
+          option_type: g.type,
+          option_name: c.option_name,
+          extra_price: c.extra_price,
+        })),
+      ),
+    })),
   })
   for (const p of photos.value) {
     if (p.isNew) {
@@ -133,6 +189,37 @@ function cancel() {
       </div>
       <div class="form-group"><label>名稱</label><input v-model="it.name" /></div>
       <div class="form-group"><label>價格</label><input v-model.number="it.price" type="number" /></div>
+
+      <div style="margin-top:8px;">
+        <div
+          v-for="(g, gi) in it.optionGroups"
+          :key="gi"
+          style="background:#f7f7fb;border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;"
+        >
+          <div class="item-row-head" style="margin-bottom:6px;">
+            <strong style="font-size:12px;color:var(--muted);">選項群組 {{ gi + 1 }}</strong>
+            <span class="rm" @click="removeOptionGroup(i, gi)">刪除群組</span>
+          </div>
+          <div class="form-group">
+            <label>群組名稱(例:口味 / 加購)</label>
+            <input v-model="g.group" placeholder="口味" />
+          </div>
+          <div class="form-group">
+            <label>選擇方式</label>
+            <select v-model="g.type">
+              <option value="radio">單選(例如口味)</option>
+              <option value="checkbox">可多選(例如加購)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>選項內容(用逗號分開;要加價的用「名稱+金額」,例:白飯加量+20)</label>
+            <input v-model="g.choicesText" placeholder="原味,泰式,五辣" />
+          </div>
+        </div>
+        <span style="color:var(--brand);font-weight:600;cursor:pointer;font-size:13px;" @click="addOptionGroup(i)">
+          + 新增選項群組(口味/加購)
+        </span>
+      </div>
     </div>
   </section>
 

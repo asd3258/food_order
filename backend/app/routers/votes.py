@@ -82,6 +82,23 @@ def save_my_choice(batch_id: int, payload: schemas.VoteChoiceIn, db: Session = D
     return {"ok": True}
 
 
+@router.delete("/{batch_id}/my-choice")
+def clear_my_choice(batch_id: int, user: str, db: Session = Depends(get_db)):
+    """Corresponds to pressing Edit (v0.5 behavior change): immediately
+    removes the user's locked vote so it stops counting toward the tally
+    right away, rather than keeping the old pick counted until Save is
+    pressed again. The user has to pick and Save again to be counted."""
+    batch = db.query(models.VoteBatch).filter(models.VoteBatch.id == batch_id).first()
+    if not batch or batch.status != "open":
+        raise HTTPException(404, "Open vote batch not found")
+    vote = db.query(models.Vote).filter(models.Vote.vote_batch_id == batch_id,
+                                         models.Vote.user == user).first()
+    if vote:
+        db.delete(vote)
+        db.commit()
+    return {"ok": True}
+
+
 @router.patch("/{batch_id}/deadline", response_model=schemas.VoteBatchOut)
 def update_deadline(batch_id: int, payload: schemas.DeadlineIn, acting_user: str,
                      db: Session = Depends(get_db)):

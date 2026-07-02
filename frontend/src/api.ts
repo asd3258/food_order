@@ -190,6 +190,8 @@ export const api = {
   getVote: (id: number, user?: string) => request<VoteBatchOut>(`/api/votes/${id}${qs({ user })}`),
   saveMyChoice: (batchId: number, user: string, restaurantId: number) => request(
     `/api/votes/${batchId}/my-choice`, { method: 'PUT', body: JSON.stringify({ user, restaurant_id: restaurantId }) }),
+  clearMyChoice: (batchId: number, user: string) => request<void>(
+    `/api/votes/${batchId}/my-choice${qs({ user })}`, { method: 'DELETE' }),
   updateVoteDeadline: (batchId: number, deadlineAt: string, actingUser: string) => request<VoteBatchOut>(
     `/api/votes/${batchId}/deadline${qs({ acting_user: actingUser })}`,
     { method: 'PATCH', body: JSON.stringify({ deadline_at: deadlineAt }) }),
