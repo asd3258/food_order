@@ -31,7 +31,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql+psycopg2://food_order:food_order@food_order_db:5432/food_order
-      CORS_ORIGINS: http://localhost:5173,http://mike1-virtual-machine:55173
+      CORS_ORIGINS: http://localhost:5173,http://mike1-virtual-machine:55173,http://192.168.138.68:55173
     ports:
       - "58000:8000"
     command: >
@@ -42,9 +42,11 @@ services:
       context: ./frontend
       args:
         # Vite bakes this in at build time -- it must be reachable from the
-        # *browser* (phone/PC), so use the VM's LAN/Tailscale hostname + the
-        # API's host port, not the internal Docker service name.
-        VITE_API_BASE: http://mike1-virtual-machine:58000
+        # *browser* (phone/PC), so use an address those devices can actually
+        # resolve. The hostname "mike1-virtual-machine" isn't resolvable from
+        # phones on this network, so use the VM's LAN IP directly instead.
+        # If the VM's IP ever changes (DHCP), update this and rebuild.
+        VITE_API_BASE: http://192.168.138.68:58000
     container_name: food_order_web
     restart: unless-stopped
     depends_on:

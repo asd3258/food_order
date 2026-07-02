@@ -4,13 +4,25 @@
 // server-side, so this is not a real auth layer -- see SPEC.md section 8
 // item 1/3 for the identity/permission caveats already flagged in the spec.
 
+import { toast } from './stores/toast'
+
 const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  })
+  let res: Response
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...init,
+    })
+  } catch (networkErr) {
+    // fetch() throws (not a rejected HTTP status) when the request can't even
+    // reach the server -- wrong host/port, DNS/hostname not resolvable from
+    // this device, mixed content, CORS preflight rejected, etc. Without this,
+    // a button click just does nothing with no visible feedback.
+    toast(`連不上伺服器(${BASE})，請確認網址設定或網路連線`)
+    throw networkErr
+  }
   if (!res.ok) {
     let detail = res.statusText
     try {
@@ -19,6 +31,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       /* ignore */
     }
+    toast(`操作失敗:${detail}`)
     throw new Error(detail)
   }
   if (res.status === 204) return undefined as T
