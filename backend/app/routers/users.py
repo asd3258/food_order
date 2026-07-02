@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.database import get_db
 from app.permissions import require_admin
+from app.validators import validate_user_name
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -51,7 +52,12 @@ def login_or_create(payload: schemas.UserCreateIn, db: Session = Depends(get_db)
         raise HTTPException(400, "請輸入使用者名稱")
     existing = db.query(models.User).filter(func.lower(models.User.name) == name.lower()).first()
     if existing:
+        # Logging in as an already-existing name skips the stricter v0.8
+        # checks below -- otherwise renaming/removing this validation later
+        # could retroactively lock people out of names created before it
+        # existed.
         return _to_out(existing, _order_counts(db))
+    name = validate_user_name(name)
     u = models.User(name=name)
     db.add(u)
     db.commit()
@@ -67,10 +73,7 @@ def rename_user(user_id: int, payload: schemas.UserRenameIn, acting_user: str,
     u = db.query(models.User).filter(models.User.id == user_id).first()
     if not u:
         raise HTTPException(404, "User not found")
-    new_name = payload.name.strip()
-    if not new_name:
-        raise HTTPException(400, "請輸入使用者名稱")
-    u.name = new_name
+    u.name = validate_user_name(payload.name)
     db.commit()
     db.refresh(u)
     return _to_out(u, _order_counts(db))

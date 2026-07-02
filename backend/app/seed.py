@@ -50,7 +50,9 @@ RESTAURANTS = [
 
 
 SEED_USERS = ["Mike Chen", "Tony Su", "Asa Wang", "Vincent Yu"]
-ADMIN_USERS = ["admin_mike"]  # v0.7: is_admin=True -- log in as this name to manage users / delete history
+ADMIN_USERS = ["mike_admin"]  # v0.8: is_admin=True -- log in as this name to manage users / delete history
+# (renamed from admin_mike -- see app/migrations.py for the upgrade path on
+# already-deployed databases that already seeded the old name)
 
 
 def seed():

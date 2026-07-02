@@ -4,10 +4,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine, wait_for_db
+from app.migrations import run_light_migrations
 from app.routers import users, restaurants, orders, votes, history
 
 wait_for_db()
 Base.metadata.create_all(bind=engine)
+run_light_migrations()
 
 app = FastAPI(title="訂餐統計 App API", version="0.5.0")
 

@@ -3,8 +3,9 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, type UserProfile } from '../api'
 import { userStore } from '../stores/user'
-import { confirmAction } from '../stores/confirm'
+import { confirmAction, alertWarning } from '../stores/confirm'
 import { toast } from '../stores/toast'
+import { validateUserName } from '../validate'
 
 const router = useRouter()
 const users = ref<UserProfile[]>([])
@@ -36,8 +37,9 @@ function cancelEdit() {
 async function saveEdit() {
   if (editingId.value == null) return
   const name = editingName.value.trim()
-  if (!name) {
-    toast('請輸入使用者名稱')
+  const err = validateUserName(name)
+  if (err) {
+    await alertWarning(err)
     return
   }
   const wasCurrentUser = userStore.userId === editingId.value

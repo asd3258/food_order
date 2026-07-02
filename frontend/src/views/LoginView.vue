@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, type UserProfile } from '../api'
 import { userStore } from '../stores/user'
+import { alertWarning } from '../stores/confirm'
+import { validateUserName } from '../validate'
 
 const router = useRouter()
 const nameInput = ref('')
@@ -28,6 +30,18 @@ const filteredUsers = computed(() => {
 async function loginWithInput() {
   const name = nameInput.value.trim()
   if (!name) return
+  // v0.8: only validate names that don't already exist -- matches the
+  // backend, which lets logging in as an existing (pre-check) name through
+  // regardless, and only enforces the reserved-prefix/allow-list rules when
+  // actually creating a brand-new roster entry.
+  const isExisting = users.value.some((u) => u.name.toLowerCase() === name.toLowerCase())
+  if (!isExisting) {
+    const err = validateUserName(name)
+    if (err) {
+      await alertWarning(err)
+      return
+    }
+  }
   await userStore.loginAs(name)
   router.push('/')
 }
