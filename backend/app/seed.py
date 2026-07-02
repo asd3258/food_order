@@ -5,6 +5,7 @@ is immediately testable end-to-end. Run with: python -m app.seed
 import datetime as dt
 
 from app.database import Base, engine, SessionLocal, wait_for_db
+from app.migrations import run_light_migrations
 from app import models
 
 RESTAURANTS = [
@@ -58,6 +59,7 @@ ADMIN_USERS = ["mike_admin"]  # v0.8: is_admin=True -- log in as this name to ma
 def seed():
     wait_for_db()
     Base.metadata.create_all(bind=engine)
+    run_light_migrations()  # ensure new columns (e.g. hours/category) exist before any query below
     db = SessionLocal()
     try:
         if db.query(models.Restaurant).count() > 0:
