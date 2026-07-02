@@ -104,7 +104,17 @@ def update_restaurant(restaurant_id: int, payload: schemas.RestaurantUpdate,
             raise HTTPException(400, "請輸入餐廳類型")
         r.type = payload.type.strip()
     if payload.menu_items is not None:
-        db.query(models.MenuItem).filter(models.MenuItem.restaurant_id == r.id).delete()
+        # Query.delete() is a *bulk* DELETE -- it bypasses SQLAlchemy's ORM
+        # cascade rules entirely (those only fire on session.delete()/unit-
+        # of-work operations), so deleting MenuItem rows this way leaves
+        # their MenuItemOption children behind and the DB rejects it with a
+        # foreign key violation. Delete the options first, explicitly.
+        old_item_ids = [row[0] for row in db.query(models.MenuItem.id).filter(
+            models.MenuItem.restaurant_id == r.id).all()]
+        if old_item_ids:
+            db.query(models.MenuItemOption).filter(
+                models.MenuItemOption.menu_item_id.in_(old_item_ids)).delete(synchronize_session=False)
+        db.query(models.MenuItem).filter(models.MenuItem.restaurant_id == r.id).delete(synchronize_session=False)
         db.flush()
         for item in payload.menu_items:
             mi = models.MenuItem(restaurant_id=r.id, name=item.name, price=item.price, category=item.category)
