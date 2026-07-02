@@ -114,6 +114,7 @@ class PlaceInfoIn(BaseModel):
 
 
 class PlaceInfoOut(BaseModel):
+    name: str = ""
     phone: str = ""
     address: str = ""
     hours: str = ""

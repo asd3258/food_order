@@ -89,10 +89,11 @@ async function fetchPlaceInfo() {
   fetchingPlace.value = true
   try {
     const info = await api.fetchPlaceInfo(mapUrl.value.trim())
+    if (info.name && !name.value.trim()) name.value = info.name
     if (info.phone) phone.value = info.phone
     if (info.address) address.value = info.address
     if (info.hours) hours.value = info.hours
-    toast('已從 Google Map 讀取電話/地址/營業時間,請檢查後再建立餐廳')
+    toast('已從 Google Map 讀取店名/電話/地址/營業時間,請檢查後再建立餐廳')
   } catch {
     // api.ts already toasted the backend's error detail (缺金鑰/找不到地點等)
   } finally {
@@ -175,7 +176,7 @@ async function submit() {
         <input v-model="mapUrl" placeholder="https://maps.app.goo.gl/..." />
       </div>
       <button class="btn btn-secondary btn-full" :disabled="fetchingPlace || !mapUrl.trim()" @click="fetchPlaceInfo">
-        {{ fetchingPlace ? '讀取中...' : '📍 從 Google Map 讀取電話/地址/營業時間' }}
+        {{ fetchingPlace ? '讀取中...' : '📍 從 Google Map 讀取店名/電話/地址/營業時間' }}
       </button>
     </div>
     <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">

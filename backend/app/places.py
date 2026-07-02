@@ -94,7 +94,10 @@ def _resolve_name_and_coords(map_url: str) -> tuple[str | None, float | None, fl
 
 def _text_search_place_id(query: str, lat: float | None, lng: float | None) -> str | None:
     url = "https://places.googleapis.com/v1/places:searchText"
-    body: dict = {"textQuery": query}
+    # v0.10 follow-up: languageCode/regionCode -- without these Google
+    # defaults to English results (English address format, English weekday
+    # names in opening hours), which isn't what a Taiwan-based team wants.
+    body: dict = {"textQuery": query, "languageCode": "zh-TW", "regionCode": "TW"}
     if lat is not None and lng is not None:
         # Small radius (200m) -- we already have a specific pin from the
         # Maps URL, this is just about landing on that exact place instead
@@ -115,11 +118,16 @@ def _place_details(place_id: str) -> dict:
     url = f"https://places.googleapis.com/v1/places/{place_id}"
     headers = {
         "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
-        # nationalPhoneNumber + formattedAddress = Pro tier ($17/1k) same as
-        # opening hours, so no cost saved by trimming the field mask further.
-        "X-Goog-FieldMask": "nationalPhoneNumber,formattedAddress,regularOpeningHours.weekdayDescriptions",
+        # displayName costs nothing extra (Essentials tier); nationalPhoneNumber
+        # + formattedAddress = Pro tier ($17/1k) same as opening hours, so no
+        # cost saved by trimming the field mask further.
+        "X-Goog-FieldMask": "displayName,nationalPhoneNumber,formattedAddress,regularOpeningHours.weekdayDescriptions",
     }
-    resp = httpx.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
+    # languageCode/regionCode -- same reasoning as the text search call: get
+    # a Taiwan-formatted address ("...路...號" style) and 星期X 開頭的營業時間,
+    # not the English defaults.
+    params = {"languageCode": "zh-TW", "regionCode": "TW"}
+    resp = httpx.get(url, headers=headers, params=params, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
     return resp.json()
 
@@ -149,6 +157,7 @@ def fetch_place_info(map_url: str) -> dict:
 
     hours_lines = data.get("regularOpeningHours", {}).get("weekdayDescriptions", [])
     return {
+        "name": data.get("displayName", {}).get("text", ""),
         "phone": data.get("nationalPhoneNumber", ""),
         "address": data.get("formattedAddress", ""),
         "hours": "\n".join(hours_lines),

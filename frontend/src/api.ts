@@ -85,6 +85,7 @@ export interface AiMenuItemDraft {
   options: OptionChoice[]
 }
 export interface PlaceInfo {
+  name: string
   phone: string
   address: string
   hours: string

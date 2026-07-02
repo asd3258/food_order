@@ -100,10 +100,11 @@ async function fetchPlaceInfo() {
   fetchingPlace.value = true
   try {
     const info = await api.fetchPlaceInfo(mapUrl.value.trim())
+    if (info.name && !name.value.trim()) name.value = info.name
     if (info.phone) phone.value = info.phone
     if (info.address) address.value = info.address
     if (info.hours) hours.value = info.hours
-    toast('已從 Google Map 讀取電話/地址/營業時間,請檢查後再儲存')
+    toast('已從 Google Map 讀取店名/電話/地址/營業時間,請檢查後再儲存')
   } catch {
     // api.ts already toasted the backend's error detail
   } finally {
@@ -169,7 +170,7 @@ async function classifyCategories() {
     for (const it of items.value) {
       const suggested = byName.get(it.name.trim())
       if (suggested && suggested !== (it.category || '')) {
-        changes.push(`${it.name}:「${it.category || '未分類'}」→「${suggested}」`)
+        changes.push(`${it.name} ${it.category || '未分類'} -> ${suggested}`)
       }
     }
     if (!changes.length) {
@@ -255,7 +256,7 @@ async function removeRestaurant() {
       <div class="form-group"><label>餐廳名稱</label><input v-model="name" /></div>
       <div class="form-group"><label>Google Map 連結</label><input v-model="mapUrl" placeholder="https://maps.app.goo.gl/..." /></div>
       <button class="btn btn-secondary btn-full" style="margin-bottom:12px;" :disabled="fetchingPlace || !mapUrl.trim()" @click="fetchPlaceInfo">
-        {{ fetchingPlace ? '讀取中...' : '📍 從 Google Map 讀取電話/地址/營業時間' }}
+        {{ fetchingPlace ? '讀取中...' : '📍 從 Google Map 讀取店名/電話/地址/營業時間' }}
       </button>
       <div class="form-group"><label>電話</label><input v-model="phone" /></div>
       <div class="form-group"><label>地址</label><input v-model="address" /></div>
