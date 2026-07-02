@@ -42,23 +42,53 @@ class PlacesError(Exception):
     pass
 
 
+_BROWSER_HEADERS = {
+    # Google's redirect handler behaves differently for non-browser clients
+    # (httpx's default "python-httpx/x.x" UA can land on a stripped-down
+    # response instead of the normal /maps/place/... redirect) -- send a
+    # realistic desktop UA to make this resolve the same way a browser would.
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
+}
+
+
 def _resolve_name_and_coords(map_url: str) -> tuple[str | None, float | None, float | None]:
     try:
-        resp = httpx.get(map_url, follow_redirects=True, timeout=REQUEST_TIMEOUT)
+        resp = httpx.get(map_url, follow_redirects=True, timeout=REQUEST_TIMEOUT,
+                          headers=_BROWSER_HEADERS)
         final_url = str(resp.url)
-    except Exception:
+    except Exception as exc:
+        print(f"[places] failed to resolve {map_url!r}: {exc}")
         final_url = map_url
+
+    print(f"[places] resolved {map_url!r} -> {final_url!r}")
+
+    if "consent.google.com" in final_url:
+        # EU/某些地區的 cookie 同意頁 -- 沒有真的瀏覽器 session 通過同意流程,
+        # 純 HTTP 請求會卡在這裡，永遠拿不到真正的 /maps/place/... 網址。
+        raise PlacesError("Google 要求先通過 Cookie 同意頁,無法自動解析這個連結,請改用電腦版網頁的網址")
 
     name = None
     m = re.search(r"/maps/place/([^/@]+)", final_url)
     if m:
         name = urllib.parse.unquote(m.group(1)).replace("+", " ")
+    else:
+        # 手機分享連結有時會解析成 .../maps/@lat,lng,zoom?q=店名&... 或
+        # .../maps?q=店名 這種沒有 /place/ 路徑的格式 -- 從 q= 參數撈店名。
+        parsed = urllib.parse.urlparse(final_url)
+        q = urllib.parse.parse_qs(parsed.query).get("q")
+        if q:
+            name = q[0]
 
     lat = lng = None
     m2 = re.search(r"@(-?\d+\.\d+),(-?\d+\.\d+)", final_url)
     if m2:
         lat, lng = float(m2.group(1)), float(m2.group(2))
 
+    print(f"[places] extracted name={name!r} lat={lat!r} lng={lng!r}")
     return name, lat, lng
 
 
