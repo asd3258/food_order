@@ -119,6 +119,7 @@ export interface OrderOut {
   initiator: string
   deadline_at: string
   status: string
+  is_locked: boolean
   items: OrderItemRow[]
 }
 export interface StatRow {
@@ -233,8 +234,8 @@ export const api = {
   listOrders: (status = 'open') => request<OrderOut[]>(`/api/orders${qs({ status })}`),
   createOrder: (payload: { restaurant_id: number; initiator: string; deadline_at: string; source_vote_batch_id?: number }) =>
     request<OrderOut>('/api/orders', { method: 'POST', body: JSON.stringify(payload) }),
-  getOrder: (id: number) => request<OrderOut>(`/api/orders/${id}`),
-  getOrderStats: (id: number) => request<StatRow[]>(`/api/orders/${id}/stats`),
+  getOrder: (id: number, user?: string) => request<OrderOut>(`/api/orders/${id}${qs({ user })}`),
+  getOrderStats: (id: number, user?: string) => request<StatRow[]>(`/api/orders/${id}/stats${qs({ user })}`),
   addOrderItem: (orderId: number, payload: any) => request<OrderItemRow>(
     `/api/orders/${orderId}/items`, { method: 'POST', body: JSON.stringify(payload) }),
   removeOwnItem: (orderId: number, itemId: number, user: string) => request<void>(
@@ -246,6 +247,8 @@ export const api = {
     { method: 'PATCH', body: JSON.stringify({ deadline_at: deadlineAt }) }),
   closeOrder: (orderId: number, actingUser: string) => request<HistoryEntry>(
     `/api/orders/${orderId}/close${qs({ acting_user: actingUser })}`, { method: 'POST' }),
+  lockOrder: (orderId: number, actingUser: string) => request<OrderOut>(
+    `/api/orders/${orderId}/lock${qs({ acting_user: actingUser })}`, { method: 'PATCH' }),
   deleteOrder: (orderId: number, actingUser: string) => request<void>(
     `/api/orders/${orderId}${qs({ acting_user: actingUser })}`, { method: 'DELETE' }),
 

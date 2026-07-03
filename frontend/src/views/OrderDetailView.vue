@@ -45,10 +45,14 @@ const myLines = computed(() => stats.value.filter((s) => s.user === userStore.us
 const myTotal = computed(() => myLines.value.reduce((sum, l) => sum + l.amount, 0))
 
 async function load() {
-  order.value = await api.getOrder(orderId)
-  restaurant.value = await api.getRestaurantMenu(order.value.restaurant_id)
-  stats.value = await api.getOrderStats(orderId)
-  editDeadline.value = isoToParts(order.value.deadline_at)
+  try {
+    order.value = await api.getOrder(orderId, userStore.username)
+    restaurant.value = await api.getRestaurantMenu(order.value.restaurant_id)
+    stats.value = await api.getOrderStats(orderId, userStore.username)
+    editDeadline.value = isoToParts(order.value.deadline_at)
+  } catch (e: any) {
+    router.push('/')
+  }
 }
 onMounted(load)
 
@@ -127,11 +131,19 @@ async function softDelete(itemId: number) {
   stats.value = await api.getOrderStats(orderId)
 }
 
+async function lockOrder() {
+  const ok = await confirmAction('確定要鎖定此訂單嗎?鎖定後其他人將無法進入。')
+  if (!ok) return
+  await api.lockOrder(orderId, userStore.username)
+  toast('已鎖定訂單')
+  load()
+}
+
 async function closeOrder() {
-  const ok = await confirmAction('確定要結單嗎?統計結果將寫入歷史訂單。')
+  const ok = await confirmAction('確定要保存到歷史紀錄嗎?統計結果將寫入歷史訂單。')
   if (!ok) return
   await api.closeOrder(orderId, userStore.username)
-  toast('已結單,轉入歷史訂單')
+  toast('已保存到歷史紀錄')
   router.push('/')
 }
 async function deleteOrder() {
@@ -193,7 +205,8 @@ function doShare() {
     </div>
 
     <div v-if="isInitiator" class="btn-row">
-      <button class="btn btn-secondary" @click="closeOrder">結單</button>
+      <button v-if="!order.is_locked" class="btn btn-secondary" @click="lockOrder">鎖定</button>
+      <button class="btn btn-secondary" @click="closeOrder">保存到歷史紀錄</button>
       <button class="btn btn-danger" @click="deleteOrder">刪除</button>
     </div>
 

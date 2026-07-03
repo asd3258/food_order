@@ -53,20 +53,24 @@ def create_order(payload: schemas.OrderCreateIn, db: Session = Depends(get_db)):
 
 
 @router.get("/{order_id}", response_model=schemas.OrderOut)
-def get_order(order_id: int, db: Session = Depends(get_db)):
+def get_order(order_id: int, user: str | None = None, db: Session = Depends(get_db)):
     order = _order_query(db).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
+    if order.is_locked and order.initiator != user and not is_admin_user(db, user):
+        raise HTTPException(403, "此訂單已鎖定，只有發起者或管理員可以查看")
     return order
 
 
 @router.get("/{order_id}/stats", response_model=list[schemas.StatRow])
-def get_order_stats(order_id: int, db: Session = Depends(get_db)):
+def get_order_stats(order_id: int, user: str | None = None, db: Session = Depends(get_db)):
     """Everyone's current totals (SPEC 4.4) — one row per OrderItem, including
     soft-deleted rows (frontend renders those with strikethrough)."""
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
+    if order.is_locked and order.initiator != user and not is_admin_user(db, user):
+        raise HTTPException(403, "此訂單已鎖定，只有發起者或管理員可以查看")
     rows = []
     for item in order.items:
         rows.append(schemas.StatRow(
@@ -190,6 +194,19 @@ def close_order(order_id: int, acting_user: str, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(history)
     return history
+
+
+@router.patch("/{order_id}/lock", response_model=schemas.OrderOut)
+def lock_order(order_id: int, acting_user: str, db: Session = Depends(get_db)):
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not order:
+        raise HTTPException(404, "Order not found")
+    if order.initiator != acting_user and not is_admin_user(db, acting_user):
+        raise HTTPException(403, "只有發起者可以鎖定訂單")
+    order.is_locked = True
+    db.commit()
+    db.refresh(order)
+    return order
 
 
 @router.delete("/{order_id}", status_code=204)

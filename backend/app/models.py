@@ -160,6 +160,7 @@ class Order(Base):
     source_vote_batch_id = Column(Integer, nullable=True)
     deadline_at = Column(DateTime, nullable=False)
     status = Column(String, default="open")  # open | closed | deleted
+    is_locked = Column(Boolean, default=False)
     created_at = Column(DateTime, default=utcnow)
     closed_at = Column(DateTime, nullable=True)
 

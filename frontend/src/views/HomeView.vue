@@ -3,6 +3,8 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, type OrderOut, type VoteBatchOut } from '../api'
 import { formatDeadline } from '../deadline'
+import { userStore } from '../stores/user'
+import { toast } from '../stores/toast'
 
 const router = useRouter()
 const orders = ref<OrderOut[]>([])
@@ -24,8 +26,12 @@ async function load() {
 
 onMounted(load)
 
-function openOrder(id: number) {
-  router.push(`/orders/${id}`)
+function openOrder(o: OrderOut) {
+  if (o.is_locked && o.initiator !== userStore.username && !userStore.isAdmin) {
+    toast('此訂單已鎖定，只有發起者或管理員可以進入')
+    return
+  }
+  router.push(`/orders/${o.id}`)
 }
 function openVote(id: number) {
   router.push(`/votes/${id}`)
@@ -36,9 +42,9 @@ function openVote(id: number) {
   <section class="block">
     <h2>當前已發起訂單</h2>
     <div v-if="orders.length === 0" class="empty">目前沒有訂單</div>
-    <div v-else v-for="o in orders" :key="o.id" class="card card-clickable" @click="openOrder(o.id)">
+    <div v-else v-for="o in orders" :key="o.id" class="card card-clickable" @click="openOrder(o)">
       <div>
-        <div class="name">訂單{{ o.id }} · {{ restaurantNames[o.restaurant_id] || '未知餐廳' }}</div>
+        <div class="name">訂單{{ o.id }} <span v-if="o.is_locked">🔒</span> · {{ restaurantNames[o.restaurant_id] || '未知餐廳' }}</div>
         <div class="sub">發起者:{{ o.initiator }} 截止時間:{{ formatDeadline(o.deadline_at) }}</div>
       </div>
       <div class="chevron">›</div>

@@ -183,6 +183,7 @@ class OrderOut(BaseModel):
     initiator: str
     deadline_at: dt.datetime
     status: str
+    is_locked: bool = False
     items: List[OrderItemOut] = []
 
 

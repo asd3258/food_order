@@ -116,6 +116,8 @@ def run_light_migrations() -> None:
     _add_column_if_missing("users", "ui_mode", "VARCHAR", default_sql="'normal'")
     # v0.12: 修正編輯餐廳存檔時,曾下過訂單的餐廳會被 order_items 外鍵擋住刪除的問題。
     _fix_order_item_menu_fk()
+    # v0.13: 新增訂單鎖定功能。
+    _add_column_if_missing("orders", "is_locked", "BOOLEAN", default_sql="FALSE")
 
     # v0.11: make sure the MinIO bucket exists/is public-read before the
     # photo backfill below tries to use it.
