@@ -29,8 +29,13 @@ export function compressImage(file: File, maxWidth = 1920, maxHeight = 1920, qua
 
         ctx.drawImage(img, 0, 0, width, height)
 
-        // WebP is widely supported in modern browsers and provides better compression
-        const dataUrl = canvas.toDataURL('image/webp', quality)
+        // WebP is widely supported in modern browsers and provides better compression.
+        // However, if the browser (e.g. older iOS Safari) doesn't support WebP export,
+        // it will fall back to uncompressed PNG, which makes the file size huge.
+        let dataUrl = canvas.toDataURL('image/webp', quality)
+        if (dataUrl.startsWith('data:image/png')) {
+          dataUrl = canvas.toDataURL('image/jpeg', quality)
+        }
         resolve(dataUrl)
       }
       img.onerror = () => reject(new Error('Failed to load image'))
