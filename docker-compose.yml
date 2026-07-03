@@ -22,6 +22,19 @@ services:
       retries: 20
       start_period: 10s
 
+  food_order_minio:
+    image: minio/minio:latest
+    container_name: food_order_minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: food_order_minio      # CHANGE_ME before deploying (same idea as the Postgres password below)
+      MINIO_ROOT_PASSWORD: CHANGE_ME_MINIO_PW
+    volumes:
+      - food_order_minio_data:/data
+    command: server /data --console-address ":9001"
+    ports:
+      - "59001:9001"   # 只開管理主控台方便你人工檢查/除錯,S3 API(9000)只在 Docker 內部網路使用,不對外開
+
   food_order_api:
     build: ./backend
     container_name: food_order_api
@@ -29,6 +42,8 @@ services:
     depends_on:
       food_order_db:
         condition: service_healthy
+      food_order_minio:
+        condition: service_started
     environment:
       DATABASE_URL: postgresql+psycopg2://food_order:food_order@food_order_db:5432/food_order
       CORS_ORIGINS: http://localhost:5173,http://mike1-virtual-machine:55173,http://192.168.138.68:55173
@@ -44,6 +59,12 @@ services:
       # v0.10: Google Places API (New) -- separate Google product/project
       # from Gemini, needs its own key. See .env.example / README.md.
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      # v0.11: 餐廳照片改存 MinIO(物件儲存),不再整張塞進資料庫。這兩個值要
+      # 跟上面 food_order_minio 服務的 MINIO_ROOT_USER/PASSWORD 一致。
+      MINIO_ENDPOINT: http://food_order_minio:9000
+      MINIO_ACCESS_KEY: food_order_minio
+      MINIO_SECRET_KEY: CHANGE_ME_MINIO_PW
+      MINIO_BUCKET: restaurant-photos
     ports:
       - "58000:8000"
     command: >
@@ -61,8 +82,10 @@ services:
     restart: unless-stopped
     depends_on:
       - food_order_api
+      - food_order_minio   # nginx.conf's /media/ location proxies straight to MinIO
     ports:
       - "55173:80"
 
 volumes:
   food_order_db_data:
+  food_order_minio_data:

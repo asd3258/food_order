@@ -10,6 +10,7 @@ from sqlalchemy import func, text
 
 from app import models
 from app.database import SessionLocal, engine
+from app.storage import MINIO_ACCESS_KEY, StorageError, upload_data_url, wait_for_minio
 
 
 def _rename_admin_mike_to_mike_admin(db) -> None:
@@ -45,13 +46,45 @@ def _add_column_if_missing(table: str, column: str, coltype: str, default_sql: s
         pass  # already exists
 
 
+def _migrate_photos_to_object_storage(db) -> None:
+    """v0.11: move any already-stored `data:` base64 photos into MinIO,
+    replacing the row's image_url with the new /media/... path -- see
+    app/storage.py. Only touches rows that still start with "data:"; once
+    migrated they no longer match, so re-running this on every startup is
+    naturally idempotent and just a cheap no-op query once everything's
+    already moved."""
+    if not MINIO_ACCESS_KEY:
+        return  # wait_for_minio() already printed why -- don't also spam per-photo errors below
+    photos = db.query(models.RestaurantPhoto).filter(
+        models.RestaurantPhoto.image_url.like("data:%")).all()
+    if not photos:
+        return
+    migrated = 0
+    for p in photos:
+        try:
+            p.image_url = upload_data_url(p.image_url, p.restaurant_id)
+            migrated += 1
+        except StorageError as exc:
+            print(f"[migrations] skipped photo id={p.id}: {exc}")
+    db.commit()
+    if migrated:
+        print(f"[migrations] moved {migrated} photo(s) from base64 to object storage")
+
+
 def run_light_migrations() -> None:
     # v0.10: 營業時間 on restaurants, 分類 on menu_items.
     _add_column_if_missing("restaurants", "hours", "TEXT")
     _add_column_if_missing("menu_items", "category", "VARCHAR")
+    # v0.11: 餐廳清單手動排序。
+    _add_column_if_missing("restaurants", "sort_order", "INTEGER", default_sql="0")
+
+    # v0.11: make sure the MinIO bucket exists/is public-read before the
+    # photo backfill below tries to use it.
+    wait_for_minio()
 
     db = SessionLocal()
     try:
         _rename_admin_mike_to_mike_admin(db)
+        _migrate_photos_to_object_storage(db)
     finally:
         db.close()

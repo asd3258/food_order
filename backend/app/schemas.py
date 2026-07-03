@@ -104,6 +104,11 @@ class PhotoUploadIn(BaseModel):
     caption: str = ""
 
 
+# ---------- v0.11: 餐廳清單手動排序 ----------
+class RestaurantReorderIn(BaseModel):
+    ids: List[int]  # 完整的餐廳 id 清單,依你想要的順序排列
+
+
 class MenuParseIn(BaseModel):
     image_url: str  # data URL of a menu photo, same shape as PhotoUploadIn
 

@@ -188,6 +188,11 @@ export const api = {
   listRestaurants: (q?: string, type?: string) => request<RestaurantSummary[]>(
     `/api/restaurants${qs({ q, type })}`),
   listRestaurantTypes: () => request<string[]>('/api/restaurants/types'),
+  // v0.11: 手動排序 -- 傳完整的 id 清單(依想要的順序),只在沒有套用搜尋/類型
+  // 篩選時呼叫(見 RestaurantListView.vue)。
+  reorderRestaurants: (ids: number[]) => request<void>('/api/restaurants/reorder', {
+    method: 'POST', body: JSON.stringify({ ids }),
+  }),
   getRestaurantMenu: (id: number) => request<RestaurantDetail>(`/api/restaurants/${id}/menu`),
   createRestaurant: (payload: any) => request<RestaurantDetail>('/api/restaurants', {
     method: 'POST', body: JSON.stringify(payload),

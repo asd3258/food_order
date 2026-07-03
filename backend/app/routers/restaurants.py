@@ -8,6 +8,7 @@ from app import models, schemas
 from app.database import get_db
 from app.ai_menu import parse_menu_photo, classify_menu_categories, MenuParseError
 from app.places import fetch_place_info, PlacesError
+from app.storage import upload_data_url, delete_object, StorageError
 
 router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
 
@@ -23,8 +24,10 @@ def _restaurant_query(db: Session):
 def list_restaurants(q: Optional[str] = None, type: Optional[str] = None,
                       db: Session = Depends(get_db)):
     """v0.5: `q` matches restaurant name OR any menu item name; `type` filters
-    by restaurant type. Both combine with AND, matching SPEC.md section 3."""
-    query = db.query(models.Restaurant)
+    by restaurant type. Both combine with AND, matching SPEC.md section 3.
+    v0.11: ordered by sort_order (手動排序) first, id as a stable tiebreaker
+    for restaurants that haven't been manually reordered yet."""
+    query = db.query(models.Restaurant).order_by(models.Restaurant.sort_order, models.Restaurant.id)
     if type:
         query = query.filter(models.Restaurant.type == type)
     restaurants = query.all()
@@ -42,6 +45,18 @@ def list_restaurants(q: Optional[str] = None, type: Optional[str] = None,
                     filtered.append(r)
             restaurants = filtered
     return restaurants
+
+
+@router.post("/reorder", status_code=204)
+def reorder_restaurants(payload: schemas.RestaurantReorderIn, db: Session = Depends(get_db)):
+    """v0.11: 餐廳清單手動排序。前端傳完整的 id 清單(依想要的順序),這裡直接把
+    每個 id 的 sort_order 設成它在清單裡的索引值。只在「沒有套用搜尋/類型篩選」
+    的情況下呼叫 -- 篩選中的子集不代表完整順序,前端會擋掉那個情境。"""
+    for index, restaurant_id in enumerate(payload.ids):
+        db.query(models.Restaurant).filter(models.Restaurant.id == restaurant_id).update(
+            {"sort_order": index}, synchronize_session=False)
+    db.commit()
+    return None
 
 
 @router.get("/types", response_model=list[str])
@@ -208,12 +223,19 @@ def classify_categories(payload: schemas.ClassifyCategoriesIn, db: Session = Dep
 
 @router.post("/{restaurant_id}/photos", response_model=schemas.PhotoOut)
 def upload_photo(restaurant_id: int, payload: schemas.PhotoUploadIn, db: Session = Depends(get_db)):
+    """v0.11: the uploaded `data:` base64 photo is decoded and pushed to
+    MinIO here (see app/storage.py) -- only the resulting short /media/...
+    path gets stored in the DB, not the whole image."""
     r = db.query(models.Restaurant).filter(models.Restaurant.id == restaurant_id).first()
     if not r:
         raise HTTPException(404, "Restaurant not found")
     max_order = db.query(models.RestaurantPhoto).filter(
         models.RestaurantPhoto.restaurant_id == restaurant_id).count()
-    photo = models.RestaurantPhoto(restaurant_id=restaurant_id, image_url=payload.image_url,
+    try:
+        stored_url = upload_data_url(payload.image_url, restaurant_id)
+    except StorageError as exc:
+        raise HTTPException(400, str(exc))
+    photo = models.RestaurantPhoto(restaurant_id=restaurant_id, image_url=stored_url,
                                     caption=payload.caption, sort_order=max_order)
     db.add(photo)
     db.commit()
@@ -228,6 +250,7 @@ def delete_photo(restaurant_id: int, photo_id: int, db: Session = Depends(get_db
         models.RestaurantPhoto.restaurant_id == restaurant_id).first()
     if not photo:
         raise HTTPException(404, "Photo not found")
+    delete_object(photo.image_url)  # no-op for placeholder:/legacy data: rows -- see storage.py
     db.delete(photo)
     db.commit()
     return None

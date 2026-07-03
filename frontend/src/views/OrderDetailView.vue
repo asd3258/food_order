@@ -18,6 +18,25 @@ const restaurant = ref<RestaurantDetail | null>(null)
 const stats = ref<StatRow[]>([])
 const editDeadline = ref<DeadlineParts | null>(null)
 
+// v0.11: 點餐清單同樣依「分類」分組(跟 RestaurantMenuView 的唯讀菜單一致),
+// 未分類項目排最後。
+const groupedMenu = computed(() => {
+  const items = restaurant.value?.menu_items || []
+  const catOrder: string[] = []
+  const groups: Record<string, MenuItem[]> = {}
+  for (const m of items) {
+    const cat = m.category?.trim() || '未分類'
+    if (!groups[cat]) {
+      groups[cat] = []
+      if (cat === '未分類') catOrder.push(cat)
+      else catOrder.unshift(cat)
+    }
+    groups[cat].push(m)
+  }
+  const sorted = catOrder.filter((c) => c !== '未分類').concat(catOrder.includes('未分類') ? ['未分類'] : [])
+  return sorted.map((category) => ({ category, items: groups[category] }))
+})
+
 const isInitiator = computed(() => order.value?.initiator === userStore.username)
 const myLines = computed(() => stats.value.filter((s) => s.user === userStore.username && !s.is_deleted))
 const myTotal = computed(() => myLines.value.reduce((sum, l) => sum + l.amount, 0))
@@ -170,12 +189,15 @@ function doShare() {
       <button class="btn btn-danger" @click="deleteOrder">刪除</button>
     </div>
 
-    <div v-for="m in restaurant.menu_items" :key="m.id" class="menu-item" @click="openItemSheet(m)">
-      <div>
-        <div class="mi-name">{{ m.name }}</div>
-        <div class="mi-price">${{ m.price }}</div>
+    <div v-for="grp in groupedMenu" :key="grp.category">
+      <div class="menu-cat" style="margin-top:14px;font-size:12px;color:var(--muted);font-weight:600;">{{ grp.category }}</div>
+      <div v-for="m in grp.items" :key="m.id" class="menu-item" @click="openItemSheet(m)">
+        <div>
+          <div class="mi-name">{{ m.name }}</div>
+          <div class="mi-price">${{ m.price }}</div>
+        </div>
+        <div class="plus-badge">+</div>
       </div>
-      <div class="plus-badge">+</div>
     </div>
 
     <section class="block">

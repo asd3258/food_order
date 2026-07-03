@@ -4,6 +4,7 @@ import { api, type HistoryEntry } from '../api'
 import { userStore } from '../stores/user'
 import { confirmAction } from '../stores/confirm'
 import { toast } from '../stores/toast'
+import { copyText } from '../share'
 
 const entries = ref<HistoryEntry[]>([])
 const expanded = reactive<Set<number>>(new Set())
@@ -22,6 +23,24 @@ async function togglePayment(entry: HistoryEntry, user: string) {
   if (entry.initiator !== userStore.username) return
   await api.togglePayment(entry.id, user, userStore.username)
   load()
+}
+
+// v0.11: 「複製成文字」-- 整理成一段方便貼到 LINE/Teams 通知大家付款的純文字,
+// 不用截圖或一個個念金額。
+function buildHistoryText(h: HistoryEntry): string {
+  const lines = [
+    `${h.restaurant_name} - ${h.closed_date}`,
+    `共 ${h.people_count} 人,合計 $${h.total_amount}`,
+    '',
+    ...h.lines.map((l) => `${l.item_label} x${l.quantity} - ${l.user} - $${l.amount}`),
+    '',
+    '收款狀態:',
+    ...h.payments.map((p) => `${p.is_paid ? '✅' : '⬜'} ${p.user} $${p.total_amount}`),
+  ]
+  return lines.join('\n')
+}
+function copyHistoryText(h: HistoryEntry) {
+  copyText(buildHistoryText(h), '已複製成文字,可以貼到 LINE/Teams 了')
 }
 
 // v0.7: 歷史清單 delete is admin-only.
@@ -68,6 +87,7 @@ async function removeEntry(entry: HistoryEntry) {
         <span class="puser">{{ p.user }}</span>
         <span class="pamt">${{ p.total_amount }}</span>
       </label>
+      <button class="btn btn-secondary btn-full" style="margin-top:10px;" @click.stop="copyHistoryText(h)">📋 複製成文字</button>
     </div>
   </div>
 </template>

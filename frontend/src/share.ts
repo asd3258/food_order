@@ -4,15 +4,20 @@ export function canWebShare(): boolean {
   return typeof navigator !== 'undefined' && typeof navigator.share === 'function'
 }
 
-export async function copyLink(url: string) {
+// v0.11: generic "copy arbitrary text to clipboard" -- copyLink() below is
+// just this with a URL and a fixed toast message. Used for the 歷史訂單
+// "複製成文字" button (a formatted 品項/金額/收款狀態 summary to paste into
+// LINE/Teams), so the success/failure toast wording needed to be generic
+// too instead of always saying "已複製連結".
+export async function copyText(text: string, successMessage = '已複製', failureMessage = '複製失敗,請手動選取文字複製') {
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(text)
     } else {
       // Fallback for browsers without the Clipboard API (some in-app/Teams
       // mobile webviews) -- select a hidden textarea and copy via execCommand.
       const el = document.createElement('textarea')
-      el.value = url
+      el.value = text
       el.style.position = 'fixed'
       el.style.opacity = '0'
       document.body.appendChild(el)
@@ -20,10 +25,14 @@ export async function copyLink(url: string) {
       document.execCommand('copy')
       document.body.removeChild(el)
     }
-    toast('已複製連結')
+    toast(successMessage)
   } catch {
-    toast('複製失敗,請手動選取網址複製')
+    toast(failureMessage)
   }
+}
+
+export async function copyLink(url: string) {
+  await copyText(url, '已複製連結', '複製失敗,請手動選取網址複製')
 }
 
 export async function shareLink(title: string, text: string, url: string) {

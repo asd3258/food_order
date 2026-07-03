@@ -55,6 +55,7 @@ class Restaurant(Base):
     address = Column(String, default="")
     map_url = Column(String, default="")
     hours = Column(Text, default="")  # v0.10: 營業時間, free-text (textarea), e.g. from Google Places or typed by hand
+    sort_order = Column(Integer, default=0)  # v0.11: 餐廳清單手動排序,數字小的排前面
     type = Column(String, nullable=False, default="便當")  # 便當/飲料/牛排/義大利麵
     created_by = Column(String, default="")
     created_at = Column(DateTime, default=utcnow)
