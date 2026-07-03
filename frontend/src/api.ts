@@ -249,6 +249,8 @@ export const api = {
     `/api/orders/${orderId}/close${qs({ acting_user: actingUser })}`, { method: 'POST' }),
   lockOrder: (orderId: number, actingUser: string) => request<OrderOut>(
     `/api/orders/${orderId}/lock${qs({ acting_user: actingUser })}`, { method: 'PATCH' }),
+  unlockOrder: (orderId: number, actingUser: string) => request<OrderOut>(
+    `/api/orders/${orderId}/unlock${qs({ acting_user: actingUser })}`, { method: 'PATCH' }),
   deleteOrder: (orderId: number, actingUser: string) => request<void>(
     `/api/orders/${orderId}${qs({ acting_user: actingUser })}`, { method: 'DELETE' }),
 

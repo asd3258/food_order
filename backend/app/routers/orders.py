@@ -209,6 +209,19 @@ def lock_order(order_id: int, acting_user: str, db: Session = Depends(get_db)):
     return order
 
 
+@router.patch("/{order_id}/unlock", response_model=schemas.OrderOut)
+def unlock_order(order_id: int, acting_user: str, db: Session = Depends(get_db)):
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not order:
+        raise HTTPException(404, "Order not found")
+    if order.initiator != acting_user and not is_admin_user(db, acting_user):
+        raise HTTPException(403, "只有發起者可以解除鎖單")
+    order.is_locked = False
+    db.commit()
+    db.refresh(order)
+    return order
+
+
 @router.delete("/{order_id}", status_code=204)
 def delete_order(order_id: int, acting_user: str, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.id == order_id).first()

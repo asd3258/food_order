@@ -132,18 +132,26 @@ async function softDelete(itemId: number) {
 }
 
 async function lockOrder() {
-  const ok = await confirmAction('確定要鎖定此訂單嗎?鎖定後其他人將無法進入。')
+  const ok = await confirmAction('確定要鎖單嗎?鎖單後其他人將無法進入。')
   if (!ok) return
   await api.lockOrder(orderId, userStore.username)
-  toast('已鎖定訂單')
+  toast('已鎖單')
+  load()
+}
+
+async function unlockOrder() {
+  const ok = await confirmAction('確定要解除鎖單嗎?解除後其他人將可以進入。')
+  if (!ok) return
+  await api.unlockOrder(orderId, userStore.username)
+  toast('已解除鎖單')
   load()
 }
 
 async function closeOrder() {
-  const ok = await confirmAction('確定要保存到歷史紀錄嗎?統計結果將寫入歷史訂單。')
+  const ok = await confirmAction('確定要完成訂單嗎?統計結果將寫入歷史訂單。')
   if (!ok) return
   await api.closeOrder(orderId, userStore.username)
-  toast('已保存到歷史紀錄')
+  toast('已完成訂單')
   router.push('/')
 }
 async function deleteOrder() {
@@ -205,8 +213,9 @@ function doShare() {
     </div>
 
     <div v-if="isInitiator" class="btn-row">
-      <button v-if="!order.is_locked" class="btn btn-secondary" @click="lockOrder">鎖定</button>
-      <button class="btn btn-secondary" @click="closeOrder">保存到歷史紀錄</button>
+      <button v-if="!order.is_locked" class="btn btn-secondary" @click="lockOrder">鎖單</button>
+      <button v-if="order.is_locked" class="btn btn-secondary" @click="unlockOrder">解除鎖單</button>
+      <button v-if="order.is_locked" class="btn btn-secondary" @click="closeOrder">完成訂單</button>
       <button class="btn btn-danger" @click="deleteOrder">刪除</button>
     </div>
 
