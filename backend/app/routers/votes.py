@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
 from app.database import get_db
+from app.permissions import is_admin_user
 
 router = APIRouter(prefix="/api/votes", tags=["votes"])
 
@@ -106,7 +107,7 @@ def update_deadline(batch_id: int, payload: schemas.DeadlineIn, acting_user: str
         joinedload(models.VoteBatch.candidates)).filter(models.VoteBatch.id == batch_id).first()
     if not batch:
         raise HTTPException(404, "Vote batch not found")
-    if batch.initiator != acting_user:
+    if batch.initiator != acting_user and not is_admin_user(db, acting_user):
         raise HTTPException(403, "只有發起者可以修改截止時間")
     batch.deadline_at = payload.deadline_at
     db.commit()
@@ -121,7 +122,7 @@ def decide_vote(batch_id: int, acting_user: str, db: Session = Depends(get_db)):
         joinedload(models.VoteBatch.candidates)).filter(models.VoteBatch.id == batch_id).first()
     if not batch or batch.status != "open":
         raise HTTPException(404, "Open vote batch not found")
-    if batch.initiator != acting_user:
+    if batch.initiator != acting_user and not is_admin_user(db, acting_user):
         raise HTTPException(403, "只有發起者可以開票")
 
     winner_id, best_count = None, -1
@@ -148,7 +149,7 @@ def delete_vote(batch_id: int, acting_user: str, db: Session = Depends(get_db)):
     batch = db.query(models.VoteBatch).filter(models.VoteBatch.id == batch_id).first()
     if not batch:
         raise HTTPException(404, "Vote batch not found")
-    if batch.initiator != acting_user:
+    if batch.initiator != acting_user and not is_admin_user(db, acting_user):
         raise HTTPException(403, "只有發起者可以刪除投票")
     batch.status = "deleted"
     db.commit()

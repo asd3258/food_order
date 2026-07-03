@@ -73,7 +73,15 @@ def rename_user(user_id: int, payload: schemas.UserRenameIn, acting_user: str,
     u = db.query(models.User).filter(models.User.id == user_id).first()
     if not u:
         raise HTTPException(404, "User not found")
-    u.name = validate_user_name(payload.name)
+    new_name = validate_user_name(payload.name)
+    # v0.12: 大小寫視為同一人 -- login_or_create 早就用 func.lower() 比對過,這裡
+    # 補上同樣的檢查,避免管理員把某人改名成跟別人只差大小寫的名字(例如已經有
+    # "Mike Chen",又把別人改名成"mike chen"),造成兩個外觀幾乎一樣的帳號。
+    dup = db.query(models.User).filter(
+        func.lower(models.User.name) == new_name.lower(), models.User.id != user_id).first()
+    if dup:
+        raise HTTPException(400, f"已經有使用者叫「{dup.name}」(大小寫視為同一人),請改用其他名稱")
+    u.name = new_name
     db.commit()
     db.refresh(u)
     return _to_out(u, _order_counts(db))

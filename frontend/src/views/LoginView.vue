@@ -12,7 +12,6 @@ const quickSearch = ref('')
 const users = ref<UserProfile[]>([])
 
 async function load() {
-  // Backend already sorts by order_count desc, name asc (SPEC: 依歷史訂單次數排序).
   users.value = await api.listUsers()
 }
 onMounted(load)
@@ -25,6 +24,27 @@ const filteredUsers = computed(() => {
   const q = quickSearch.value.trim().toLowerCase()
   if (!q) return visibleUsers.value
   return visibleUsers.value.filter((u) => u.name.toLowerCase().includes(q))
+})
+
+// v0.12: 快速登入不再依訂單次數排序 -- 改成純文字排序,並用開頭 1 個字當分組
+// 標題(像通訊錄一樣),方便人數變多時快速找到人。
+function groupLetter(name: string): string {
+  const first = Array.from(name.trim())[0] || '#'
+  return first.toUpperCase()
+}
+const groupedUsers = computed(() => {
+  const sorted = [...filteredUsers.value].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'))
+  const groups: { letter: string; users: typeof sorted }[] = []
+  for (const u of sorted) {
+    const letter = groupLetter(u.name)
+    let g = groups.find((g) => g.letter === letter)
+    if (!g) {
+      g = { letter, users: [] }
+      groups.push(g)
+    }
+    g.users.push(u)
+  }
+  return groups.sort((a, b) => a.letter.localeCompare(b.letter, 'zh-Hant'))
 })
 
 async function loginWithInput() {
@@ -73,9 +93,12 @@ async function quickLogin(u: UserProfile) {
     </div>
 
     <div v-if="!filteredUsers.length" class="empty">找不到符合的使用者</div>
-    <div v-else v-for="u in filteredUsers" :key="u.id" class="quick-login-item" @click="quickLogin(u)">
-      <span class="qname">{{ u.name }}</span>
-      <span v-if="u.order_count > 0" class="qcount">{{ u.order_count }} 次</span>
-    </div>
+    <template v-else v-for="g in groupedUsers" :key="g.letter">
+      <div class="quick-login-group-header">{{ g.letter }}</div>
+      <div v-for="u in g.users" :key="u.id" class="quick-login-item" @click="quickLogin(u)">
+        <span class="qname">{{ u.name }}</span>
+        <span v-if="u.order_count > 0" class="qcount">{{ u.order_count }} 次</span>
+      </div>
+    </template>
   </section>
 </template>

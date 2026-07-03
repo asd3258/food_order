@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
 from app.database import get_db
+from app.permissions import is_admin_user
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
@@ -126,7 +127,7 @@ def soft_delete_item(order_id: int, item_id: int, acting_user: str, db: Session 
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
-    if order.initiator != acting_user:
+    if order.initiator != acting_user and not is_admin_user(db, acting_user):
         raise HTTPException(403, "只有發起者可以刪除其他人的品項")
     item = db.query(models.OrderItem).filter(models.OrderItem.id == item_id,
                                                models.OrderItem.order_id == order_id).first()
@@ -145,7 +146,7 @@ def update_deadline(order_id: int, payload: schemas.DeadlineIn, acting_user: str
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
-    if order.initiator != acting_user:
+    if order.initiator != acting_user and not is_admin_user(db, acting_user):
         raise HTTPException(403, "只有發起者可以修改截止時間")
     order.deadline_at = payload.deadline_at
     db.commit()
@@ -158,7 +159,7 @@ def close_order(order_id: int, acting_user: str, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
-    if order.initiator != acting_user:
+    if order.initiator != acting_user and not is_admin_user(db, acting_user):
         raise HTTPException(403, "只有發起者可以結單")
     r = db.query(models.Restaurant).filter(models.Restaurant.id == order.restaurant_id).first()
 
@@ -196,7 +197,7 @@ def delete_order(order_id: int, acting_user: str, db: Session = Depends(get_db))
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
-    if order.initiator != acting_user:
+    if order.initiator != acting_user and not is_admin_user(db, acting_user):
         raise HTTPException(403, "只有發起者可以刪除訂單")
     order.status = "deleted"
     db.commit()

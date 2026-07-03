@@ -15,8 +15,10 @@ async function load() {
     api.listVotes('open'),
     api.listRestaurants(),
   ])
-  orders.value = o
-  votes.value = v
+  // v0.12: 依訂單/投票編號由小到大排序(訂單1,訂單2,訂單4...),不依賴資料庫
+  // 回傳的預設順序。
+  orders.value = [...o].sort((a, b) => a.id - b.id)
+  votes.value = [...v].sort((a, b) => a.id - b.id)
   restaurantNames.value = Object.fromEntries(restaurants.map((r) => [r.id, r.name]))
 }
 

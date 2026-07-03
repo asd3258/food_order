@@ -16,7 +16,10 @@ const selected = ref<Set<number>>(new Set())
 const deadline = ref<DeadlineParts>(defaultDeadline())
 
 async function load() {
-  restaurants.value = await api.listRestaurants(q.value, activeType.value || undefined)
+  // v0.12: 開單與投票一律依「★常用優先,再依名稱」排序,不管有沒有搜尋/篩選都
+  // 套用同一套邏輯(不像餐廳清單有排序按鈕可以切換)。
+  restaurants.value = await api.listRestaurants(
+    q.value, activeType.value || undefined, 'star', userStore.username || undefined)
 }
 async function loadTypes() {
   try {
@@ -88,7 +91,7 @@ async function handleAction() {
     <div v-if="restaurants.length === 0" class="empty">找不到符合的餐廳</div>
     <label v-else v-for="r in restaurants" :key="r.id" class="checkbox-item">
       <input type="checkbox" :checked="selected.has(r.id)" @change="toggle(r.id, ($event.target as HTMLInputElement).checked)" />
-      <span class="cname">{{ r.name }} <span style="color:var(--muted);font-weight:400;font-size:11px;">({{ r.type }})</span></span>
+      <span class="cname">{{ r.name }} <span style="color:var(--muted);font-weight:400;font-size:11px;">({{ r.type }})</span><span class="fav-star-static">{{ r.is_favorite ? '★' : '☆' }}</span></span>
     </label>
 
     <div class="deadline-row">

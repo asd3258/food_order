@@ -19,3 +19,17 @@ def require_admin(db: Session, acting_user: str) -> models.User:
     if not u or not u.is_admin:
         raise HTTPException(403, "只有管理者帳號可以執行此操作")
     return u
+
+
+def is_admin_user(db: Session, name: str) -> bool:
+    """v0.12: non-raising check -- admin's power is now the same as an
+    initiator's everywhere (close/delete an order, soft-delete someone
+    else's item, update a deadline, tally/delete a vote), even on
+    orders/votes admin didn't personally start. Unlike require_admin, this
+    doesn't 403 by itself -- callers OR it together with the existing
+    `x.initiator != acting_user` check."""
+    name = (name or "").strip()
+    if not name:
+        return False
+    u = db.query(models.User).filter(models.User.name == name).first()
+    return bool(u and u.is_admin)

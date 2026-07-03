@@ -6,7 +6,7 @@ import { HOURS, MINUTES, formatDeadline, isoToParts, partsToIso, type DeadlinePa
 import { userStore } from '../stores/user'
 import { confirmAction } from '../stores/confirm'
 import { toast } from '../stores/toast'
-import { canWebShare, copyLink, shareLink } from '../share'
+import { canWebShare, copyLink, copyText, shareLink } from '../share'
 import { requireLogin } from '../auth'
 
 const route = useRoute()
@@ -143,6 +143,11 @@ function mapUrl(r: RestaurantDetail): string {
   return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(r.name + ' ' + r.address)
 }
 
+// v0.12: 原本單一顆「在 Google Maps 開啟」按鈕拆成兩個功能。
+function copyMapLink(r: RestaurantDetail) {
+  copyText(mapUrl(r), '已複製地圖連結')
+}
+
 const shareSupported = canWebShare()
 function currentUrl(): string {
   return window.location.href
@@ -234,7 +239,10 @@ function doShare() {
       </div>
     </section>
 
-    <a class="btn btn-secondary btn-full" :href="mapUrl(restaurant)" target="_blank">📍 在 Google Maps 開啟</a>
+    <div class="btn-row">
+      <button class="btn btn-secondary" @click="copyMapLink(restaurant)">📋 複製地圖連結</button>
+      <a class="btn btn-secondary" :href="mapUrl(restaurant)" target="_blank">📍 在 Google Maps 開啟</a>
+    </div>
 
     <div class="overlay" :class="{ active: sheetOpen }" @click.self="closeSheet">
       <div class="sheet" v-if="sheetItem">

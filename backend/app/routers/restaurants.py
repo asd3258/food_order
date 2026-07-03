@@ -22,19 +22,32 @@ def _restaurant_query(db: Session):
 
 @router.get("", response_model=list[schemas.RestaurantSummaryOut])
 def list_restaurants(q: Optional[str] = None, type: Optional[str] = None, sort: str = "created_desc",
-                      db: Session = Depends(get_db)):
+                      user: Optional[str] = None, db: Session = Depends(get_db)):
     """v0.5: `q` matches restaurant name OR any menu item name; `type` filters
     by restaurant type. Both combine with AND, matching SPEC.md section 3.
-    v0.11: `sort` replaces the old manual drag-to-reorder feature with two
-    fixed presets -- "created_desc" (預設,建立時間新到舊) or "name" (名稱排序)."""
+    v0.11: `sort` replaces the old manual drag-to-reorder feature with fixed
+    presets -- "created_desc" (預設,建立時間新到舊), "name" (名稱排序), or
+    (v0.12) "star" (★常用優先,再依名稱).
+    v0.12: `user` -- 用來算每筆餐廳目前是否已被這個使用者加入★常用
+    (is_favorite),也是 sort="star" 時用來排序的依據。沒帶 user 的話
+    is_favorite 全部是 False,star 排序就退化成純名稱排序。"""
     query = db.query(models.Restaurant)
-    if sort == "name":
-        query = query.order_by(models.Restaurant.name)
-    else:
-        query = query.order_by(models.Restaurant.created_at.desc(), models.Restaurant.id.desc())
     if type:
         query = query.filter(models.Restaurant.type == type)
     restaurants = query.all()
+
+    fav_ids: set[int] = set()
+    if user:
+        fav_ids = {row[0] for row in db.query(models.RestaurantFavorite.restaurant_id).filter(
+            models.RestaurantFavorite.user == user).all()}
+
+    if sort == "name":
+        restaurants.sort(key=lambda r: r.name)
+    elif sort == "star":
+        restaurants.sort(key=lambda r: (r.id not in fav_ids, r.name))
+    else:
+        restaurants.sort(key=lambda r: (r.created_at, r.id), reverse=True)
+
     if q:
         needle = q.strip().lower()
         if needle:
@@ -48,7 +61,41 @@ def list_restaurants(q: Optional[str] = None, type: Optional[str] = None, sort: 
                 if any(needle in (n[0] or "").lower() for n in item_names):
                     filtered.append(r)
             restaurants = filtered
+
+    for r in restaurants:
+        r.is_favorite = r.id in fav_ids
     return restaurants
+
+
+@router.post("/{restaurant_id}/favorite", response_model=schemas.FavoriteOut)
+def add_favorite(restaurant_id: int, user: str, db: Session = Depends(get_db)):
+    """v0.12: 餐廳清單的★常用 -- by user 記錄,不是全域的。重複呼叫是安全的
+    (已經加過就不會重複新增)。"""
+    r = db.query(models.Restaurant).filter(models.Restaurant.id == restaurant_id).first()
+    if not r:
+        raise HTTPException(404, "Restaurant not found")
+    name = (user or "").strip()
+    if not name:
+        raise HTTPException(400, "請先登入")
+    existing = db.query(models.RestaurantFavorite).filter(
+        models.RestaurantFavorite.user == name,
+        models.RestaurantFavorite.restaurant_id == restaurant_id).first()
+    if not existing:
+        db.add(models.RestaurantFavorite(user=name, restaurant_id=restaurant_id))
+        db.commit()
+    return schemas.FavoriteOut(is_favorite=True)
+
+
+@router.delete("/{restaurant_id}/favorite", response_model=schemas.FavoriteOut)
+def remove_favorite(restaurant_id: int, user: str, db: Session = Depends(get_db)):
+    name = (user or "").strip()
+    fav = db.query(models.RestaurantFavorite).filter(
+        models.RestaurantFavorite.user == name,
+        models.RestaurantFavorite.restaurant_id == restaurant_id).first()
+    if fav:
+        db.delete(fav)
+        db.commit()
+    return schemas.FavoriteOut(is_favorite=False)
 
 
 @router.get("/types", response_model=list[str])

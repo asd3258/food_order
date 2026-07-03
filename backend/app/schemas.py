@@ -96,6 +96,11 @@ class RestaurantSummaryOut(BaseModel):
     phone: str
     address: str
     created_at: dt.datetime
+    is_favorite: bool = False  # v0.12: 這個 user 是否已把這間餐廳加入★常用
+
+
+class FavoriteOut(BaseModel):
+    is_favorite: bool
 
 
 class RestaurantDetailOut(RestaurantSummaryOut):

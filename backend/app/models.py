@@ -67,6 +67,18 @@ class Restaurant(Base):
                                cascade="all, delete-orphan")
 
 
+class RestaurantFavorite(Base):
+    """v0.12: per-user「★常用」標記 -- 跟著登入的帳號走(user 是純字串,跟其他
+    地方的身分模式一致,不是真正的外鍵到 User.id),不是全域設定。同一人對同一
+    間餐廳最多一筆(靠應用層檢查,不是 DB unique constraint)。這是一張全新的
+    表,Base.metadata.create_all() 就會自動建立,不需要額外的手動 migration。"""
+    __tablename__ = "restaurant_favorites"
+    id = Column(Integer, primary_key=True, index=True)
+    user = Column(String, nullable=False)
+    restaurant_id = Column(Integer, ForeignKey("restaurants.id"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+
 class RestaurantPhoto(Base):
     __tablename__ = "restaurant_photos"
     id = Column(Integer, primary_key=True, index=True)

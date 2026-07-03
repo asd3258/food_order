@@ -14,6 +14,14 @@
 }
 *{box-sizing:border-box;}
 html,body,#app{height:100%;}
+/* v0.12: reserve the vertical scrollbar's width up front on desktop browsers
+   (which draw an in-layout scrollbar), so a page that's short enough to NOT
+   need scrolling doesn't render a few extra pixels wider than a page that
+   does -- without this, switching between pages of different heights makes
+   the centered .app-shell visibly shift sideways. Mobile browsers use
+   overlay scrollbars that don't take layout space, so they never had this
+   problem to begin with. */
+html{overflow-y:scroll;scrollbar-gutter:stable;}
 body{
   margin:0;
   font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei",sans-serif;
@@ -43,6 +51,7 @@ header.topbar .title{font-size:17px;font-weight:600;margin-bottom:8px;}
 .login-status{font-size:13px;opacity:.95;}
 .login-status-warn{opacity:.85;font-style:italic;}
 .login-bar button{background:#fff;color:var(--brand);border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;}
+.quick-login-group-header{font-size:12px;font-weight:700;color:var(--muted);padding:6px 4px 4px;}
 .quick-login-item{display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;}
 .quick-login-item:active{background:#f6f6f6;}
 .quick-login-item .qname{font-size:14px;font-weight:600;}
@@ -66,6 +75,8 @@ h2.h2-highlight{color:var(--hl);font-weight:800;}
 .card-clickable .name{font-weight:600;font-size:15px;}
 .card-clickable .sub{font-size:12px;color:var(--muted);margin-top:3px;}
 .chevron{color:var(--muted);font-size:18px;}
+.fav-star{font-size:20px;color:#e0a800;margin-right:10px;cursor:pointer;flex-shrink:0;line-height:1;}
+.fav-star-static{font-size:14px;color:#e0a800;margin-left:6px;}
 .empty{color:var(--muted);font-size:14px;padding:16px 4px;text-align:center;}
 .page-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
 .page-header .back{font-size:22px;color:var(--brand);cursor:pointer;text-decoration:none;}
@@ -77,7 +88,7 @@ button.btn-danger{background:var(--danger);color:#fff;}
 button.btn-primary:disabled{background:#c9c8e6;cursor:not-allowed;}
 button.btn-full{width:100%;}
 .btn-row{display:flex;gap:10px;margin-bottom:14px;}
-.btn-row button{flex:1;}
+.btn-row button,.btn-row a.btn{flex:1;}
 a.btn{display:block;text-align:center;text-decoration:none;}
 nav.bottomnav{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border);display:flex;}
 nav.bottomnav a{flex:1;background:none;border:none;padding:10px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);font-size:11px;text-decoration:none;}
@@ -190,6 +201,8 @@ html.large-mode .manage-user-row .mlink{font-size:14px;}
 html.large-mode .form-group label{font-size:15px;}
 html.large-mode .form-group input,html.large-mode .form-group select,html.large-mode .form-group textarea{font-size:16px;padding:12px 13px;}
 html.large-mode .checkbox-item .cname{font-size:16px;}
+html.large-mode .fav-star{font-size:26px;}
+html.large-mode .fav-star-static{font-size:17px;}
 html.large-mode .checkbox-item input{width:22px;height:22px;}
 html.large-mode .info-row{font-size:16px;}
 html.large-mode .stat-table{font-size:15px;}

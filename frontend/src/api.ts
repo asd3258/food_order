@@ -79,6 +79,7 @@ export interface RestaurantSummary {
   phone: string
   address: string
   created_at: string
+  is_favorite: boolean
 }
 export interface RestaurantDetail extends RestaurantSummary {
   map_url: string
@@ -191,11 +192,16 @@ export const api = {
     `/api/users/${id}/ui-mode`, { method: 'PATCH', body: JSON.stringify({ ui_mode: uiMode }) }),
 
   // Restaurants
-  // v0.11: `sort` -- "created_desc"(預設,建立時間新到舊)或 "name"(名稱排序),
-  // 取代舊的手動拖曳排序(見 RestaurantListView.vue)。
-  listRestaurants: (q?: string, type?: string, sort?: string) => request<RestaurantSummary[]>(
-    `/api/restaurants${qs({ q, type, sort })}`),
+  // v0.12: `sort` -- "star"(★常用優先,新增,見 RestaurantListView.vue 的
+  // 「預設排序」與 OrderVoteView.vue)、"created_desc"(建立時間新到舊)、
+  // "name"(名稱排序);`user` 用來算 is_favorite 跟 star 排序的依據。
+  listRestaurants: (q?: string, type?: string, sort?: string, user?: string) => request<RestaurantSummary[]>(
+    `/api/restaurants${qs({ q, type, sort, user })}`),
   listRestaurantTypes: () => request<string[]>('/api/restaurants/types'),
+  addFavorite: (id: number, user: string) => request<{ is_favorite: boolean }>(
+    `/api/restaurants/${id}/favorite${qs({ user })}`, { method: 'POST' }),
+  removeFavorite: (id: number, user: string) => request<{ is_favorite: boolean }>(
+    `/api/restaurants/${id}/favorite${qs({ user })}`, { method: 'DELETE' }),
   getRestaurantMenu: (id: number) => request<RestaurantDetail>(`/api/restaurants/${id}/menu`),
   createRestaurant: (payload: any) => request<RestaurantDetail>('/api/restaurants', {
     method: 'POST', body: JSON.stringify(payload),

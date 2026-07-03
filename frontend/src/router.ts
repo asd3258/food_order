@@ -2,6 +2,15 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
   history: createWebHistory(),
+  // v0.12: without this, switching routes keeps whatever scroll position the
+  // PREVIOUS page was at -- if you'd scrolled down on Home then tapped
+  // "餐廳清單" in the bottom nav, the new page renders already scrolled down
+  // (looks like "the screen gets pushed down"). Mobile browsers tend to mask
+  // this (shorter lists, overlay scrollbars, address-bar auto-hide), so it's
+  // mostly only noticeable on desktop -- but the fix applies everywhere.
+  scrollBehavior() {
+    return { top: 0 }
+  },
   routes: [
     { path: '/', name: 'home', component: () => import('./views/HomeView.vue') },
     { path: '/restaurants', name: 'restaurantList', component: () => import('./views/RestaurantListView.vue') },

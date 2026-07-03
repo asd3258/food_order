@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type RestaurantDetail, type MenuItem, type OptionChoice, type Photo } from '../api'
 import ImageLightbox from '../components/ImageLightbox.vue'
+import { copyText } from '../share'
 
 const route = useRoute()
 const router = useRouter()
@@ -81,6 +82,11 @@ function scrollCarousel(dir: number) {
 function goEdit() {
   router.push(`/restaurants/${route.params.id}/edit`)
 }
+
+// v0.12: 原本單一顆「在 Google Maps 開啟」按鈕拆成兩個功能。
+function copyMapLink(r: RestaurantDetail) {
+  copyText(mapUrl(r), '已複製地圖連結')
+}
 </script>
 
 <template>
@@ -139,6 +145,9 @@ function goEdit() {
       <div class="info-row"><span class="lbl">電話</span><span>{{ restaurant.phone }}</span></div>
       <div class="info-row" v-if="restaurant.hours"><span class="lbl">營業時間</span><span style="white-space:pre-line;">{{ restaurant.hours }}</span></div>
     </div>
-    <a class="btn btn-secondary btn-full" :href="mapUrl(restaurant)" target="_blank">📍 在 Google Maps 開啟</a>
+    <div class="btn-row">
+      <button class="btn btn-secondary" @click="copyMapLink(restaurant)">📋 複製地圖連結</button>
+      <a class="btn btn-secondary" :href="mapUrl(restaurant)" target="_blank">📍 在 Google Maps 開啟</a>
+    </div>
   </template>
 </template>
