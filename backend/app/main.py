@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine, wait_for_db
 from app.migrations import run_light_migrations
-from app.routers import users, restaurants, orders, votes, history
+from app.routers import users, restaurants, orders, votes, history, ws
 
 wait_for_db()
 Base.metadata.create_all(bind=engine)
@@ -34,6 +34,7 @@ app.include_router(restaurants.router)
 app.include_router(history.router)
 app.include_router(orders.router)
 app.include_router(votes.router)
+app.include_router(ws.router)
 
 
 @app.get("/api/health")

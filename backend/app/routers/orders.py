@@ -1,11 +1,12 @@
 import datetime as dt
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
 from app.database import get_db
 from app.permissions import is_admin_user
+from app.ws_manager import manager
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
@@ -81,7 +82,7 @@ def get_order_stats(order_id: int, user: str | None = None, db: Session = Depend
 
 
 @router.post("/{order_id}/items", response_model=schemas.OrderItemOut)
-def add_item(order_id: int, payload: schemas.OrderItemCreateIn, db: Session = Depends(get_db)):
+def add_item(order_id: int, payload: schemas.OrderItemCreateIn, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order or order.status != "open":
         raise HTTPException(404, "Open order not found")
@@ -91,11 +92,12 @@ def add_item(order_id: int, payload: schemas.OrderItemCreateIn, db: Session = De
     db.add(item)
     db.commit()
     db.refresh(item)
+    bg_tasks.add_task(manager.broadcast_order_update, order_id)
     return item
 
 
 @router.patch("/{order_id}/items/{item_id}", response_model=schemas.OrderItemOut)
-def update_own_item(order_id: int, item_id: int, payload: schemas.OrderItemCreateIn,
+def update_own_item(order_id: int, item_id: int, payload: schemas.OrderItemCreateIn, bg_tasks: BackgroundTasks,
                      db: Session = Depends(get_db)):
     item = db.query(models.OrderItem).filter(models.OrderItem.id == item_id,
                                                models.OrderItem.order_id == order_id).first()
@@ -108,11 +110,12 @@ def update_own_item(order_id: int, item_id: int, payload: schemas.OrderItemCreat
     item.note = payload.note
     db.commit()
     db.refresh(item)
+    bg_tasks.add_task(manager.broadcast_order_update, order_id)
     return item
 
 
 @router.delete("/{order_id}/items/{item_id}", status_code=204)
-def remove_own_item(order_id: int, item_id: int, user: str, db: Session = Depends(get_db)):
+def remove_own_item(order_id: int, item_id: int, user: str, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Hard-remove an item you added yourself (the 'My Order' remove action)."""
     item = db.query(models.OrderItem).filter(models.OrderItem.id == item_id,
                                                models.OrderItem.order_id == order_id).first()
@@ -122,11 +125,12 @@ def remove_own_item(order_id: int, item_id: int, user: str, db: Session = Depend
         raise HTTPException(403, "只能移除自己加入的品項")
     db.delete(item)
     db.commit()
+    bg_tasks.add_task(manager.broadcast_order_update, order_id)
     return None
 
 
 @router.patch("/{order_id}/items/{item_id}/soft-delete", response_model=schemas.OrderItemOut)
-def soft_delete_item(order_id: int, item_id: int, acting_user: str, db: Session = Depends(get_db)):
+def soft_delete_item(order_id: int, item_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Initiator soft-deletes someone else's line (SPEC 4.4 / v0.4)."""
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
@@ -141,11 +145,12 @@ def soft_delete_item(order_id: int, item_id: int, acting_user: str, db: Session 
     item.deleted_by = acting_user
     db.commit()
     db.refresh(item)
+    bg_tasks.add_task(manager.broadcast_order_update, order_id)
     return item
 
 
 @router.patch("/{order_id}/deadline", response_model=schemas.OrderOut)
-def update_deadline(order_id: int, payload: schemas.DeadlineIn, acting_user: str,
+def update_deadline(order_id: int, payload: schemas.DeadlineIn, acting_user: str, bg_tasks: BackgroundTasks,
                      db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
@@ -155,11 +160,12 @@ def update_deadline(order_id: int, payload: schemas.DeadlineIn, acting_user: str
     order.deadline_at = payload.deadline_at
     db.commit()
     db.refresh(order)
+    bg_tasks.add_task(manager.broadcast_order_update, order_id)
     return order
 
 
 @router.post("/{order_id}/close", response_model=schemas.HistoryOut)
-def close_order(order_id: int, acting_user: str, db: Session = Depends(get_db)):
+def close_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
@@ -193,11 +199,12 @@ def close_order(order_id: int, acting_user: str, db: Session = Depends(get_db)):
     order.closed_at = dt.datetime.utcnow()
     db.commit()
     db.refresh(history)
+    bg_tasks.add_task(manager.broadcast_order_update, order_id)
     return history
 
 
 @router.patch("/{order_id}/lock", response_model=schemas.OrderOut)
-def lock_order(order_id: int, acting_user: str, db: Session = Depends(get_db)):
+def lock_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
@@ -206,11 +213,12 @@ def lock_order(order_id: int, acting_user: str, db: Session = Depends(get_db)):
     order.is_locked = True
     db.commit()
     db.refresh(order)
+    bg_tasks.add_task(manager.broadcast_order_update, order_id)
     return order
 
 
 @router.patch("/{order_id}/unlock", response_model=schemas.OrderOut)
-def unlock_order(order_id: int, acting_user: str, db: Session = Depends(get_db)):
+def unlock_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
@@ -219,11 +227,12 @@ def unlock_order(order_id: int, acting_user: str, db: Session = Depends(get_db))
     order.is_locked = False
     db.commit()
     db.refresh(order)
+    bg_tasks.add_task(manager.broadcast_order_update, order_id)
     return order
 
 
 @router.delete("/{order_id}", status_code=204)
-def delete_order(order_id: int, acting_user: str, db: Session = Depends(get_db)):
+def delete_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
@@ -231,4 +240,5 @@ def delete_order(order_id: int, acting_user: str, db: Session = Depends(get_db))
         raise HTTPException(403, "只有發起者可以刪除訂單")
     order.status = "deleted"
     db.commit()
+    bg_tasks.add_task(manager.broadcast_order_update, order_id)
     return None

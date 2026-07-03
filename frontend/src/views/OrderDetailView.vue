@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type OrderOut, type RestaurantDetail, type MenuItem, type StatRow } from '../api'
 import { HOURS, MINUTES, formatDeadline, isoToParts, partsToIso, type DeadlineParts } from '../deadline'
@@ -54,7 +54,33 @@ async function load() {
     router.push('/')
   }
 }
-onMounted(load)
+let ws: WebSocket | null = null
+
+onMounted(() => {
+  load()
+  
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  let wsUrl = ''
+  if (import.meta.env.VITE_API_BASE) {
+    const base = import.meta.env.VITE_API_BASE
+    wsUrl = base.replace(/^http/, 'ws') + `/api/ws/orders/${orderId}`
+  } else {
+    wsUrl = `${protocol}//${window.location.host}/api/ws/orders/${orderId}`
+  }
+
+  ws = new WebSocket(wsUrl)
+  ws.onmessage = (event) => {
+    if (event.data === 'update') {
+      load()
+    }
+  }
+})
+
+onUnmounted(() => {
+  if (ws) {
+    ws.close()
+  }
+})
 
 async function updateDeadline() {
   if (!editDeadline.value) return
