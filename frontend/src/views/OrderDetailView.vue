@@ -271,7 +271,7 @@ function doShare() {
       </div>
     </section>
 
-    <section class="block" v-if="isInitiator">
+    <section class="block">
       <h2>目前所有人統計(彙總)</h2>
       <div class="card">
         <table class="stat-table">
@@ -283,7 +283,7 @@ function doShare() {
             <td>{{ s.quantity }}</td>
             <td>
               ${{ s.amount }}
-              <span v-if="!s.is_deleted && s.user !== userStore.username" class="rm" @click="softDelete(s.item_id)">刪除</span>
+              <span v-if="!s.is_deleted && s.user !== userStore.username && isInitiator" class="rm" @click="softDelete(s.item_id)">刪除</span>
             </td>
           </tr>
         </table>
