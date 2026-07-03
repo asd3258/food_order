@@ -40,7 +40,7 @@ def list_orders(status: str = "open", db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=schemas.OrderOut)
-def create_order(payload: schemas.OrderCreateIn, db: Session = Depends(get_db)):
+def create_order(payload: schemas.OrderCreateIn, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     r = db.query(models.Restaurant).filter(models.Restaurant.id == payload.restaurant_id).first()
     if not r:
         raise HTTPException(404, "Restaurant not found")
@@ -50,6 +50,7 @@ def create_order(payload: schemas.OrderCreateIn, db: Session = Depends(get_db)):
     db.add(order)
     db.commit()
     db.refresh(order)
+    bg_tasks.add_task(manager.broadcast_home_update)
     return order
 
 
@@ -165,6 +166,7 @@ def update_deadline(order_id: int, payload: schemas.DeadlineIn, acting_user: str
     db.commit()
     db.refresh(order)
     bg_tasks.add_task(manager.broadcast_order_update, order_id)
+    bg_tasks.add_task(manager.broadcast_home_update)
     return order
 
 
@@ -204,6 +206,7 @@ def close_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: 
     db.commit()
     db.refresh(history)
     bg_tasks.add_task(manager.broadcast_order_update, order_id)
+    bg_tasks.add_task(manager.broadcast_home_update)
     return history
 
 
@@ -218,6 +221,7 @@ def lock_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: S
     db.commit()
     db.refresh(order)
     bg_tasks.add_task(manager.broadcast_order_update, order_id)
+    bg_tasks.add_task(manager.broadcast_home_update)
     return order
 
 
@@ -232,6 +236,7 @@ def unlock_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db:
     db.commit()
     db.refresh(order)
     bg_tasks.add_task(manager.broadcast_order_update, order_id)
+    bg_tasks.add_task(manager.broadcast_home_update)
     return order
 
 
@@ -245,4 +250,5 @@ def delete_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db:
     order.status = "deleted"
     db.commit()
     bg_tasks.add_task(manager.broadcast_order_update, order_id)
+    bg_tasks.add_task(manager.broadcast_home_update)
     return None

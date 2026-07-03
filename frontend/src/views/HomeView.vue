@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, type OrderOut, type VoteBatchOut } from '../api'
 import { formatDeadline } from '../deadline'
@@ -24,7 +24,33 @@ async function load() {
   restaurantNames.value = Object.fromEntries(restaurants.map((r) => [r.id, r.name]))
 }
 
-onMounted(load)
+let ws: WebSocket | null = null
+
+onMounted(() => {
+  load()
+  
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  let wsUrl = ''
+  if (import.meta.env.VITE_API_BASE) {
+    const base = import.meta.env.VITE_API_BASE
+    wsUrl = base.replace(/^http/, 'ws') + `/api/ws/home`
+  } else {
+    wsUrl = `${protocol}//${window.location.host}/api/ws/home`
+  }
+
+  ws = new WebSocket(wsUrl)
+  ws.onmessage = (event) => {
+    if (event.data === 'update') {
+      load()
+    }
+  }
+})
+
+onUnmounted(() => {
+  if (ws) {
+    ws.close()
+  }
+})
 
 function openOrder(o: OrderOut) {
   router.push(`/orders/${o.id}`)

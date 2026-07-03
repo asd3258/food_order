@@ -14,3 +14,25 @@ async def websocket_order_endpoint(websocket: WebSocket, order_id: int):
         manager.disconnect(websocket, order_id)
     except Exception:
         manager.disconnect(websocket, order_id)
+
+@router.websocket("/home")
+async def websocket_home_endpoint(websocket: WebSocket):
+    await manager.connect_home(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect_home(websocket)
+    except Exception:
+        manager.disconnect_home(websocket)
+
+@router.websocket("/votes/{vote_id}")
+async def websocket_vote_endpoint(websocket: WebSocket, vote_id: int):
+    await manager.connect_vote(websocket, vote_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect_vote(websocket, vote_id)
+    except Exception:
+        manager.disconnect_vote(websocket, vote_id)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type VoteBatchOut } from '../api'
 import { HOURS, MINUTES, formatDeadline, isoToParts, partsToIso, type DeadlineParts } from '../deadline'
@@ -26,7 +26,33 @@ async function load() {
   pendingSelection.value = batch.value.my_selection
   editDeadline.value = isoToParts(batch.value.deadline_at)
 }
-onMounted(load)
+let ws: WebSocket | null = null
+
+onMounted(() => {
+  load()
+  
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  let wsUrl = ''
+  if (import.meta.env.VITE_API_BASE) {
+    const base = import.meta.env.VITE_API_BASE
+    wsUrl = base.replace(/^http/, 'ws') + `/api/ws/votes/${batchId}`
+  } else {
+    wsUrl = `${protocol}//${window.location.host}/api/ws/votes/${batchId}`
+  }
+
+  ws = new WebSocket(wsUrl)
+  ws.onmessage = (event) => {
+    if (event.data === 'update') {
+      load()
+    }
+  }
+})
+
+onUnmounted(() => {
+  if (ws) {
+    ws.close()
+  }
+})
 
 async function updateDeadline() {
   if (!editDeadline.value) return

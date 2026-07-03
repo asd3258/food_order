@@ -1,11 +1,12 @@
 import datetime as dt
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
 from app.database import get_db
 from app.permissions import is_admin_user
+from app.ws_manager import manager
 
 router = APIRouter(prefix="/api/votes", tags=["votes"])
 
@@ -43,7 +44,7 @@ def list_votes(status: str = "open", db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=schemas.VoteBatchOut)
-def create_vote(payload: schemas.VoteBatchCreateIn, db: Session = Depends(get_db)):
+def create_vote(payload: schemas.VoteBatchCreateIn, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     if len(payload.restaurant_ids) < 2:
         raise HTTPException(400, "投票需要至少 2 家候選餐廳")
     batch = models.VoteBatch(initiator=payload.initiator, deadline_at=payload.deadline_at)
@@ -53,6 +54,7 @@ def create_vote(payload: schemas.VoteBatchCreateIn, db: Session = Depends(get_db
         db.add(models.VoteBatchCandidate(vote_batch_id=batch.id, restaurant_id=rid))
     db.commit()
     db.refresh(batch)
+    bg_tasks.add_task(manager.broadcast_home_update)
     return _serialize_batch(batch, db)
 
 
@@ -66,7 +68,7 @@ def get_vote(batch_id: int, user: str | None = None, db: Session = Depends(get_d
 
 
 @router.put("/{batch_id}/my-choice")
-def save_my_choice(batch_id: int, payload: schemas.VoteChoiceIn, db: Session = Depends(get_db)):
+def save_my_choice(batch_id: int, payload: schemas.VoteChoiceIn, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Corresponds to pressing Save: locks in the user's choice for this batch."""
     batch = db.query(models.VoteBatch).filter(models.VoteBatch.id == batch_id).first()
     if not batch or batch.status != "open":
@@ -80,11 +82,12 @@ def save_my_choice(batch_id: int, payload: schemas.VoteChoiceIn, db: Session = D
     vote.status = "locked"
     vote.locked_at = dt.datetime.utcnow()
     db.commit()
+    bg_tasks.add_task(manager.broadcast_vote_update, batch_id)
     return {"ok": True}
 
 
 @router.delete("/{batch_id}/my-choice")
-def clear_my_choice(batch_id: int, user: str, db: Session = Depends(get_db)):
+def clear_my_choice(batch_id: int, user: str, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Corresponds to pressing Edit (v0.5 behavior change): immediately
     removes the user's locked vote so it stops counting toward the tally
     right away, rather than keeping the old pick counted until Save is
@@ -97,11 +100,12 @@ def clear_my_choice(batch_id: int, user: str, db: Session = Depends(get_db)):
     if vote:
         db.delete(vote)
         db.commit()
+        bg_tasks.add_task(manager.broadcast_vote_update, batch_id)
     return {"ok": True}
 
 
 @router.patch("/{batch_id}/deadline", response_model=schemas.VoteBatchOut)
-def update_deadline(batch_id: int, payload: schemas.DeadlineIn, acting_user: str,
+def update_deadline(batch_id: int, payload: schemas.DeadlineIn, acting_user: str, bg_tasks: BackgroundTasks,
                      db: Session = Depends(get_db)):
     batch = db.query(models.VoteBatch).options(
         joinedload(models.VoteBatch.candidates)).filter(models.VoteBatch.id == batch_id).first()
@@ -112,11 +116,13 @@ def update_deadline(batch_id: int, payload: schemas.DeadlineIn, acting_user: str
     batch.deadline_at = payload.deadline_at
     db.commit()
     db.refresh(batch)
+    bg_tasks.add_task(manager.broadcast_vote_update, batch_id)
+    bg_tasks.add_task(manager.broadcast_home_update)
     return _serialize_batch(batch, db)
 
 
 @router.post("/{batch_id}/decide", response_model=schemas.OrderOut)
-def decide_vote(batch_id: int, acting_user: str, db: Session = Depends(get_db)):
+def decide_vote(batch_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Tally: highest locked-vote candidate wins; ties -> first in candidate order."""
     batch = db.query(models.VoteBatch).options(
         joinedload(models.VoteBatch.candidates)).filter(models.VoteBatch.id == batch_id).first()
@@ -141,11 +147,13 @@ def decide_vote(batch_id: int, acting_user: str, db: Session = Depends(get_db)):
     batch.status = "decided"
     db.commit()
     db.refresh(order)
+    bg_tasks.add_task(manager.broadcast_vote_update, batch_id)
+    bg_tasks.add_task(manager.broadcast_home_update)
     return order
 
 
 @router.delete("/{batch_id}", status_code=204)
-def delete_vote(batch_id: int, acting_user: str, db: Session = Depends(get_db)):
+def delete_vote(batch_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     batch = db.query(models.VoteBatch).filter(models.VoteBatch.id == batch_id).first()
     if not batch:
         raise HTTPException(404, "Vote batch not found")
@@ -153,4 +161,6 @@ def delete_vote(batch_id: int, acting_user: str, db: Session = Depends(get_db)):
         raise HTTPException(403, "只有發起者可以刪除投票")
     batch.status = "deleted"
     db.commit()
+    bg_tasks.add_task(manager.broadcast_vote_update, batch_id)
+    bg_tasks.add_task(manager.broadcast_home_update)
     return None
