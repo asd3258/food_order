@@ -27,7 +27,7 @@ const editRuleDraft = ref<PermissionRuleUpdate>({
 async function load() {
   if (!requireLogin() || !requireAdmin()) return
   try {
-    rules.value = await api.listPermissions(userStore.currentUser!.name)
+    rules.value = await api.listPermissions(userStore.username)
   } catch {
     //
   } finally {
@@ -39,7 +39,7 @@ onMounted(load)
 async function createRule() {
   if (!requireLogin() || !requireAdmin()) return
   try {
-    const created = await api.createPermission(newRule.value, userStore.currentUser!.name)
+    const created = await api.createPermission(newRule.value, userStore.username)
     rules.value.push(created)
     showAddModal.value = false
     toast('新增權限規則成功')
@@ -53,7 +53,7 @@ async function deleteRule(r: PermissionRule) {
   const ok = await confirmAction(`確定刪除 ${r.module} 對 ${r.role} 的權限規則嗎？`)
   if (!ok) return
   try {
-    await api.deletePermission(r.id, userStore.currentUser!.name)
+    await api.deletePermission(r.id, userStore.username)
     rules.value = rules.value.filter(x => x.id !== r.id)
     toast('已刪除權限規則')
   } catch {
@@ -74,7 +74,7 @@ function startEdit(r: PermissionRule) {
 async function saveEdit(r: PermissionRule) {
   if (!requireLogin() || !requireAdmin()) return
   try {
-    const updated = await api.updatePermission(r.id, editRuleDraft.value, userStore.currentUser!.name)
+    const updated = await api.updatePermission(r.id, editRuleDraft.value, userStore.username)
     const idx = rules.value.findIndex(x => x.id === r.id)
     if (idx !== -1) {
       rules.value[idx] = updated
