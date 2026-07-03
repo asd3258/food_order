@@ -160,7 +160,14 @@ class OrderItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
     user = Column(String, nullable=False)
-    menu_item_id = Column(Integer, ForeignKey("menu_items.id"), nullable=False)
+    # v0.12: nullable + ON DELETE SET NULL -- editing a restaurant's menu
+    # bulk-deletes and recreates all its MenuItem rows (see
+    # routers/restaurants.py update_restaurant), which would otherwise be
+    # blocked by this FK the moment the restaurant has ANY order history
+    # (open or closed) referencing the old item ids. The rest of the code
+    # already treats a missing menu_item gracefully ("(已刪除品項)", $0) --
+    # this FK just needs to actually allow that instead of erroring.
+    menu_item_id = Column(Integer, ForeignKey("menu_items.id", ondelete="SET NULL"), nullable=True)
     selected_options = Column(JSON, default=list)  # list[str]
     quantity = Column(Integer, default=1)
     note = Column(String, default="")

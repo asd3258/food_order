@@ -30,12 +30,37 @@
 **技術棄取(已確認)**:
 - 前端:React 或 Vue(Mobile-first,之後用 CSS breakpoint 展開 RWD)
 - 後端:FastAPI(Python)
-- 部署:獨立網頁,連結貼到 Teams 聊天室使用(不做 Teams Tab/Manifest)
+- 部署:獨立網頁,連結貼到 Teams 聊天室使用(不做 Teams Tab/Manifest);正式環境用 Docker Compose(FastAPI + Postgres + 前端靜態網站 + MinIO 物件儲存),架在自架的 Ubuntu VM 上,見下方「開發與部署流程」
 - 使用者身分:先以「可自由修改的文字欄位」模擬 Teams 使用者名稱,之後有需要再接 Teams SSO
 - 「建立新餐廳」AI 解析菜單/串接 Google Maps/Uber Eats、foodpanda:**Phase 2/3,本階段只做手動輸入**
   - Phase 2:上傳菜單照片 → AI OCR 解析生成品項
   - Phase 3:貼上 Google Maps 網址 → AI 讀取店家資訊自動生成菜單草稿
   - 評估中(高風險,不承諾):串接 Uber Eats / foodpanda API 生成菜單 — 兩平台目前沒有對外開放給第三方開發者讀取任意餐廳菜單的公開 API,需先確認是否有官方合作管道,否則此項目可能無法落地。
+
+**開發與部署流程(實際採用的做法)**:
+
+開發在 Windows 電腦上進行,VM(Ubuntu)只負責跑正式環境的 Docker 容器,兩邊透過 GitHub 同步,不用 scp 手動搬檔案:
+
+```bash
+# 1. 在 Windows 電腦上開發、改完程式碼後推上 GitHub
+git checkout main
+git pull origin main          # 先同步最新版本,避免衝突
+git add -A
+git commit -m "說明這次改了什麼"
+git push origin main
+
+# 2. 在 Ubuntu VM 上拉下最新程式碼
+cd ~/food_order
+git pull origin main
+
+# 3. 用 docker compose 重新 build + 部署(只會重 build 有變動的服務)
+docker compose up -d --build
+```
+
+- 全程都直接在 `main` 分支上做,不另外切 feature 分支,避免搞混。
+- 資料庫結構的異動一律走 `backend/app/migrations.py` 裡的安全 `ALTER TABLE`(見該檔案開頭說明),不用 Alembic,`docker compose up -d --build` 時會在 API 容器啟動時自動套用,不需要額外手動跑 migration 指令,也不會清空現有資料。
+- 需要修改 `.env`(例如新增/更換 API 金鑰)時,只在 Ubuntu VM 上編輯,`.env` 已加入 `.gitignore`,不會被 commit、不會出現在 GitHub 上。
+- 詳細的環境設定(Gemini/OpenAI/Google Places 金鑰、MinIO 密碼、防火牆開埠等)見 `README.md`。
 
 ---
 

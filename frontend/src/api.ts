@@ -106,7 +106,7 @@ export interface CategorySuggestion {
 export interface OrderItemRow {
   id: number
   user: string
-  menu_item_id: number
+  menu_item_id: number | null  // v0.12: null once the referenced MenuItem is deleted (ON DELETE SET NULL)
   selected_options: string[]
   quantity: number
   note: string

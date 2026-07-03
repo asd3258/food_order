@@ -161,7 +161,10 @@ class OrderItemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     user: str
-    menu_item_id: int
+    # v0.12: nullable now -- see models.py OrderItem.menu_item_id (ON DELETE
+    # SET NULL when the referenced menu item is deleted by an Edit
+    # Restaurant save).
+    menu_item_id: Optional[int] = None
     selected_options: List[str] = []
     quantity: int
     note: str

@@ -83,6 +83,29 @@ def _migrate_photos_to_object_storage(db) -> None:
         print(f"[migrations] moved {migrated} photo(s) from base64 to object storage")
 
 
+def _fix_order_item_menu_fk() -> None:
+    """v0.12: order_items.menu_item_id 原本是 NOT NULL,外鍵也沒設 ON DELETE 規則
+    (預設 RESTRICT)。編輯餐廳存檔時,後端是整批刪除舊 MenuItem 再重建(見
+    routers/restaurants.py update_restaurant)——只要這間餐廳曾經被下過訂單
+    (不管訂單還開著還是已結單),這個外鍵就會擋住刪除,存檔時噴 500
+    (ForeignKeyViolation)。改成 nullable + ON DELETE SET NULL:品項被刪除後,
+    舊訂單品項的 menu_item_id 自動變成 NULL——顯示邏輯本來就有處理「找不到
+    品項」的情況(_line_label/_item_amount 顯示「(已刪除品項)」、金額算 0),
+    只是外鍵一直沒配合這個設計。歷史訂單(OrderHistory/OrderHistoryLine)是
+    獨立的文字快照,不受影響。"""
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE order_items ALTER COLUMN menu_item_id DROP NOT NULL"))
+            conn.execute(text("ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_menu_item_id_fkey"))
+            conn.execute(text(
+                "ALTER TABLE order_items ADD CONSTRAINT order_items_menu_item_id_fkey "
+                "FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE SET NULL"
+            ))
+        print("[migrations] order_items.menu_item_id is now nullable, FK is ON DELETE SET NULL")
+    except Exception as exc:
+        print(f"[migrations] order_items FK migration skipped: {exc}")
+
+
 def run_light_migrations() -> None:
     # v0.10: 營業時間 on restaurants, 分類 on menu_items.
     _add_column_if_missing("restaurants", "hours", "TEXT")
@@ -91,6 +114,8 @@ def run_light_migrations() -> None:
     _drop_column_if_exists("restaurants", "sort_order")
     # v0.11: 大字模式偏好跟著使用者帳號走。
     _add_column_if_missing("users", "ui_mode", "VARCHAR", default_sql="'normal'")
+    # v0.12: 修正編輯餐廳存檔時,曾下過訂單的餐廳會被 order_items 外鍵擋住刪除的問題。
+    _fix_order_item_menu_fk()
 
     # v0.11: make sure the MinIO bucket exists/is public-read before the
     # photo backfill below tries to use it.
