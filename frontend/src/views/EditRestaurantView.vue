@@ -8,6 +8,7 @@ import { userStore } from '../stores/user'
 import ImageLightbox from '../components/ImageLightbox.vue'
 import { requireLogin } from '../auth'
 import { optionsToGroups } from '../menuDraft'
+import { compressImage } from '../imageCompressor'
 
 interface OptionGroupDraft {
   group: string
@@ -120,15 +121,19 @@ function handleFile(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
-  const reader = new FileReader()
-  reader.onload = () => {
-    // 依目前照片數量命名(picture-1, picture-2, ...),不用原始檔名 -- 手機
-    // 拍照的檔名通常又長又沒意義(IMG_20260703_xxxx.jpg 之類)。
-    const caption = `picture-${photos.value.length + 1}`
-    photos.value.push({ image_url: String(reader.result), caption, isNew: true })
-    toast('已加入圖片,按「儲存變更」後才會真正上傳')
-  }
-  reader.readAsDataURL(file)
+  
+  compressImage(file)
+    .then((dataUrl) => {
+      // 依目前照片數量命名(picture-1, picture-2, ...),不用原始檔名 -- 手機
+      // 拍照的檔名通常又長又沒意義(IMG_20260703_xxxx.jpg 之類)。
+      const caption = `picture-${photos.value.length + 1}`
+      photos.value.push({ image_url: dataUrl, caption, isNew: true })
+      toast('已加入圖片,按「儲存變更」後才會真正上傳')
+    })
+    .catch(() => {
+      toast('圖片處理失敗，請換一張圖片再試')
+    })
+    
   input.value = ''
 }
 async function removePhoto(index: number) {

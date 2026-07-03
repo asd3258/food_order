@@ -6,6 +6,7 @@ import { userStore } from '../stores/user'
 import { toast } from '../stores/toast'
 import { requireLogin } from '../auth'
 import { optionsToGroups } from '../menuDraft'
+import { compressImage } from '../imageCompressor'
 
 interface OptionGroupDraft {
   group: string // e.g. "口味" / "加購"
@@ -58,26 +59,31 @@ function handleMenuPhoto(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
-  const reader = new FileReader()
-  reader.onload = async () => {
-    parsingMenu.value = true
-    try {
-      const parsed = await api.parseMenuPhoto(String(reader.result))
-      if (!parsed.length) {
-        toast('AI 沒有從照片中辨識出品項,請確認照片清晰或改用手動輸入')
-      } else {
-        for (const it of parsed) {
-          items.value.push({ name: it.name, price: it.price, category: it.category || '', optionGroups: optionsToGroups(it.options) })
+  
+  parsingMenu.value = true
+  compressImage(file)
+    .then(async (dataUrl) => {
+      try {
+        const parsed = await api.parseMenuPhoto(dataUrl)
+        if (!parsed.length) {
+          toast('AI 沒有從照片中辨識出品項,請確認照片清晰或改用手動輸入')
+        } else {
+          for (const it of parsed) {
+            items.value.push({ name: it.name, price: it.price, category: it.category || '', optionGroups: optionsToGroups(it.options) })
+          }
+          toast(`AI 已辨識出 ${parsed.length} 個品項,請檢查並修正後再建立餐廳`)
         }
-        toast(`AI 已辨識出 ${parsed.length} 個品項,請檢查並修正後再建立餐廳`)
+      } catch {
+        // api.ts already toasted the backend's error detail
+      } finally {
+        parsingMenu.value = false
       }
-    } catch {
-      // api.ts already toasted the backend's error detail (缺金鑰/兩個服務都失敗等)
-    } finally {
+    })
+    .catch(() => {
+      toast('圖片處理失敗，請換一張圖片再試')
       parsingMenu.value = false
-    }
-  }
-  reader.readAsDataURL(file)
+    })
+    
   input.value = ''
 }
 
