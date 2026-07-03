@@ -121,7 +121,10 @@ function handleFile(e: Event) {
   if (!file) return
   const reader = new FileReader()
   reader.onload = () => {
-    photos.value.push({ image_url: String(reader.result), caption: file.name, isNew: true })
+    // 依目前照片數量命名(picture-1, picture-2, ...),不用原始檔名 -- 手機
+    // 拍照的檔名通常又長又沒意義(IMG_20260703_xxxx.jpg 之類)。
+    const caption = `picture-${photos.value.length + 1}`
+    photos.value.push({ image_url: String(reader.result), caption, isNew: true })
     toast('已加入圖片,按「儲存變更」後才會真正上傳')
   }
   reader.readAsDataURL(file)
