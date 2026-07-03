@@ -15,7 +15,7 @@ function setUiMode(mode: string) {
   </div>
 
   <div class="card">
-    <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">🔎 顯示模式(大字模式適合長輩使用,圖示與文字都會放大)</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">🔎 顯示模式(大字模式,圖示與文字都會放大)</div>
     <div class="btn-row">
       <button class="btn" :class="userStore.uiMode === 'large' ? 'btn-secondary' : 'btn-primary'" @click="setUiMode('normal')">標準模式</button>
       <button class="btn" :class="userStore.uiMode === 'large' ? 'btn-primary' : 'btn-secondary'" @click="setUiMode('large')">大字模式</button>
