@@ -27,10 +27,6 @@ async function load() {
 onMounted(load)
 
 function openOrder(o: OrderOut) {
-  if (o.is_locked && o.initiator !== userStore.username && !userStore.isAdmin) {
-    toast('此訂單已鎖定，只有發起者或管理員可以進入')
-    return
-  }
   router.push(`/orders/${o.id}`)
 }
 function openVote(id: number) {

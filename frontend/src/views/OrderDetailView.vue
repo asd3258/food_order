@@ -41,6 +41,11 @@ const groupedMenu = computed(() => {
 // 這些按鈕,admin 帳號即使不是這筆訂單的發起者也要看得到(後端 orders.py 已經
 // 放寬,前端這裡卻只看 initiator 字串比對,按鈕才一直沒出現)。
 const isInitiator = computed(() => order.value?.initiator === userStore.username || userStore.isAdmin)
+const canModify = computed(() => {
+  if (!order.value) return false
+  if (!order.value.is_locked) return true
+  return isInitiator.value
+})
 const myLines = computed(() => stats.value.filter((s) => s.user === userStore.username && !s.is_deleted))
 const myTotal = computed(() => myLines.value.reduce((sum, l) => sum + l.amount, 0))
 
@@ -97,6 +102,10 @@ const sheetQty = ref(1)
 
 function openItemSheet(item: MenuItem) {
   if (!requireLogin()) return
+  if (!canModify.value) {
+    toast('此訂單已鎖單，無法點餐')
+    return
+  }
   sheetItem.value = item
   sheetChoices.value = {}
   for (const group of Array.from(new Set(item.options.map((o) => o.option_group)))) {
@@ -252,7 +261,7 @@ function doShare() {
           <div class="mi-name">{{ m.name }}</div>
           <div class="mi-price">${{ m.price }}</div>
         </div>
-        <div class="plus-badge">+</div>
+        <div class="plus-badge" v-if="canModify">+</div>
       </div>
     </div>
 
@@ -262,7 +271,7 @@ function doShare() {
         <div v-if="!myLines.length" class="empty">尚未選擇品項</div>
         <div v-else v-for="l in myLines" :key="l.item_id" class="cart-line">
           <span>{{ l.label }} × {{ l.quantity }}</span>
-          <span>${{ l.amount }} <span class="rm" @click="removeMyLine(l.item_id)">移除</span></span>
+          <span>${{ l.amount }} <span class="rm" v-if="canModify" @click="removeMyLine(l.item_id)">移除</span></span>
         </div>
       </div>
       <div class="cart-bar">

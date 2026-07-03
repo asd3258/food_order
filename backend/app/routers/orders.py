@@ -58,8 +58,6 @@ def get_order(order_id: int, user: str | None = None, db: Session = Depends(get_
     order = _order_query(db).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
-    if order.is_locked and order.initiator != user and not is_admin_user(db, user):
-        raise HTTPException(403, "此訂單已鎖定，只有發起者或管理員可以查看")
     return order
 
 
@@ -70,8 +68,6 @@ def get_order_stats(order_id: int, user: str | None = None, db: Session = Depend
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
-    if order.is_locked and order.initiator != user and not is_admin_user(db, user):
-        raise HTTPException(403, "此訂單已鎖定，只有發起者或管理員可以查看")
     rows = []
     for item in order.items:
         rows.append(schemas.StatRow(
@@ -86,6 +82,8 @@ def add_item(order_id: int, payload: schemas.OrderItemCreateIn, bg_tasks: Backgr
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order or order.status != "open":
         raise HTTPException(404, "Open order not found")
+    if order.is_locked and order.initiator != payload.user and not is_admin_user(db, payload.user):
+        raise HTTPException(403, "此訂單已鎖單，無法新增品項")
     item = models.OrderItem(order_id=order_id, user=payload.user, menu_item_id=payload.menu_item_id,
                              selected_options=payload.selected_options, quantity=payload.quantity,
                              note=payload.note)
@@ -103,6 +101,9 @@ def update_own_item(order_id: int, item_id: int, payload: schemas.OrderItemCreat
                                                models.OrderItem.order_id == order_id).first()
     if not item:
         raise HTTPException(404, "Item not found")
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if order and order.is_locked and order.initiator != payload.user and not is_admin_user(db, payload.user):
+        raise HTTPException(403, "此訂單已鎖單，無法修改品項")
     if item.user != payload.user:
         raise HTTPException(403, "只能修改自己加入的品項")
     item.quantity = payload.quantity
@@ -121,6 +122,9 @@ def remove_own_item(order_id: int, item_id: int, user: str, bg_tasks: Background
                                                models.OrderItem.order_id == order_id).first()
     if not item:
         raise HTTPException(404, "Item not found")
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if order and order.is_locked and order.initiator != user and not is_admin_user(db, user):
+        raise HTTPException(403, "此訂單已鎖單，無法移除品項")
     if item.user != user:
         raise HTTPException(403, "只能移除自己加入的品項")
     db.delete(item)
