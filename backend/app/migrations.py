@@ -106,6 +106,49 @@ def _fix_order_item_menu_fk() -> None:
         print(f"[migrations] order_items FK migration skipped: {exc}")
 
 
+def _seed_default_permissions(db) -> None:
+    if db.query(models.PermissionRule).first():
+        return
+        
+    rules = [
+        # 歷史訂單
+        ("歷史訂單", "admin", "-", "V", "V", "V"),
+        ("歷史訂單", "owner", "-", "V", "V", "X"),
+        ("歷史訂單", "other", "-", "V", "X", "X"),
+        # 建立餐廳
+        ("建立餐廳", "admin", "V", "V", "-", "-"),
+        ("建立餐廳", "MikeZY Zhang", "V", "V", "-", "-"),
+        ("建立餐廳", "other", "X", "V", "-", "-"),
+        # 權限維護
+        ("權限維護", "admin", "V", "V", "V", "V"),
+        ("權限維護", "MikeZY Zhang", "V", "V", "V", "V"),
+        ("權限維護", "other", "X", "V", "X", "X"),
+        # 編輯餐廳資料
+        ("編輯餐廳資料", "admin", "-", "V", "V", "V"),
+        ("編輯餐廳資料", "owner", "-", "V", "V", "V"),
+        ("編輯餐廳資料", "other", "-", "V", "X", "X"),
+        # 開單與投票
+        ("開單與投票", "admin", "V", "V", "-", "-"),
+        ("開單與投票", "owner", "V", "V", "-", "-"),
+        ("開單與投票", "other", "V", "V", "-", "-"),
+        # 訂單
+        ("訂單", "admin", "-", "V", "V", "V"),
+        ("訂單", "owner", "-", "V", "V", "V"),
+        ("訂單", "other", "-", "V", "V", "X"),
+        # 投票
+        ("投票", "admin", "-", "V", "V", "V"),
+        ("投票", "owner", "-", "V", "V", "V"),
+        ("投票", "other", "-", "V", "V", "X"),
+    ]
+    for r in rules:
+        db.add(models.PermissionRule(
+            module=r[0], role=r[1], can_create=r[2],
+            can_read=r[3], can_update=r[4], can_delete=r[5]
+        ))
+    db.commit()
+    print("[migrations] seeded default permission rules")
+
+
 def run_light_migrations() -> None:
     # v0.10: 營業時間 on restaurants, 分類 on menu_items.
     _add_column_if_missing("restaurants", "hours", "TEXT")
@@ -127,5 +170,6 @@ def run_light_migrations() -> None:
     try:
         _rename_admin_mike_to_mike_admin(db)
         _migrate_photos_to_object_storage(db)
+        _seed_default_permissions(db)
     finally:
         db.close()

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
 from app.database import get_db
-from app.permissions import is_admin_user
+from app.permissions import check_permission
 from app.ws_manager import manager
 
 router = APIRouter(prefix="/api/votes", tags=["votes"])
@@ -47,6 +47,8 @@ def list_votes(status: str = "open", db: Session = Depends(get_db)):
 def create_vote(payload: schemas.VoteBatchCreateIn, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     if len(payload.restaurant_ids) < 2:
         raise HTTPException(400, "投票需要至少 2 家候選餐廳")
+    if not check_permission(db, payload.initiator, "開單與投票", "create"):
+        raise HTTPException(403, "沒有權限發起投票")
     batch = models.VoteBatch(initiator=payload.initiator, deadline_at=payload.deadline_at)
     db.add(batch)
     db.flush()
@@ -111,7 +113,7 @@ def update_deadline(batch_id: int, payload: schemas.DeadlineIn, acting_user: str
         joinedload(models.VoteBatch.candidates)).filter(models.VoteBatch.id == batch_id).first()
     if not batch:
         raise HTTPException(404, "Vote batch not found")
-    if batch.initiator != acting_user and not is_admin_user(db, acting_user):
+    if not check_permission(db, acting_user, "投票", "delete", batch.initiator):
         raise HTTPException(403, "只有發起者可以修改截止時間")
     batch.deadline_at = payload.deadline_at
     db.commit()
@@ -128,7 +130,7 @@ def decide_vote(batch_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: 
         joinedload(models.VoteBatch.candidates)).filter(models.VoteBatch.id == batch_id).first()
     if not batch or batch.status != "open":
         raise HTTPException(404, "Open vote batch not found")
-    if batch.initiator != acting_user and not is_admin_user(db, acting_user):
+    if not check_permission(db, acting_user, "投票", "delete", batch.initiator):
         raise HTTPException(403, "只有發起者可以開票")
 
     winner_id, best_count = None, -1
@@ -157,7 +159,7 @@ def delete_vote(batch_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: 
     batch = db.query(models.VoteBatch).filter(models.VoteBatch.id == batch_id).first()
     if not batch:
         raise HTTPException(404, "Vote batch not found")
-    if batch.initiator != acting_user and not is_admin_user(db, acting_user):
+    if not check_permission(db, acting_user, "投票", "delete", batch.initiator):
         raise HTTPException(403, "只有發起者可以刪除投票")
     batch.status = "deleted"
     db.commit()

@@ -250,3 +250,31 @@ class HistoryOut(BaseModel):
     total_amount: int
     lines: List[HistoryLineOut] = []
     payments: List[HistoryPaymentOut] = []
+
+
+# ---------- Permissions ----------
+class PermissionRuleUpdateIn(BaseModel):
+    can_create: str
+    can_read: str
+    can_update: str
+    can_delete: str
+
+
+class PermissionRuleCreateIn(BaseModel):
+    module: str
+    role: str
+    can_create: str = "-"
+    can_read: str = "-"
+    can_update: str = "-"
+    can_delete: str = "-"
+
+
+class PermissionRuleOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    module: str
+    role: str
+    can_create: str
+    can_read: str
+    can_update: str
+    can_delete: str

@@ -33,3 +33,33 @@ def is_admin_user(db: Session, name: str) -> bool:
         return False
     u = db.query(models.User).filter(models.User.name == name).first()
     return bool(u and u.is_admin)
+
+
+def check_permission(db: Session, acting_user: str, module: str, action: str, resource_owner: str | None = None) -> bool:
+    """
+    Centralized RBAC checker for the new dynamic permissions system.
+    Resolves the rule to apply based on priority:
+    1. Specific username override (role == username)
+    2. Admin (role == "admin", if user is admin)
+    3. Owner (role == "owner", if user == resource_owner)
+    4. Other (role == "other", default fallback)
+    """
+    name = (acting_user or "").strip()
+    rules = db.query(models.PermissionRule).filter(models.PermissionRule.module == module).all()
+    rule_dict = {r.role: r for r in rules}
+    
+    selected_rule = None
+    if name and name in rule_dict:
+        selected_rule = rule_dict[name]
+    elif is_admin_user(db, name) and "admin" in rule_dict:
+        selected_rule = rule_dict["admin"]
+    elif name and resource_owner == name and "owner" in rule_dict:
+        selected_rule = rule_dict["owner"]
+    elif "other" in rule_dict:
+        selected_rule = rule_dict["other"]
+        
+    if not selected_rule:
+        return False
+        
+    val = getattr(selected_rule, f"can_{action}", "-")
+    return val == "V"

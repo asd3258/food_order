@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
+from app.permissions import check_permission
 
 from app import models, schemas
 from app.database import get_db
@@ -118,6 +119,8 @@ def get_restaurant_menu(restaurant_id: int, db: Session = Depends(get_db)):
 
 @router.post("", response_model=schemas.RestaurantDetailOut)
 def create_restaurant(payload: schemas.RestaurantIn, db: Session = Depends(get_db)):
+    if not check_permission(db, payload.created_by, "建立餐廳", "create"):
+        raise HTTPException(403, "沒有權限建立餐廳")
     if not payload.type or not payload.type.strip():
         raise HTTPException(400, "請輸入餐廳類型")
     r = models.Restaurant(name=payload.name, phone=payload.phone, address=payload.address,
@@ -139,10 +142,12 @@ def create_restaurant(payload: schemas.RestaurantIn, db: Session = Depends(get_d
 
 @router.put("/{restaurant_id}", response_model=schemas.RestaurantDetailOut)
 def update_restaurant(restaurant_id: int, payload: schemas.RestaurantUpdate,
-                       db: Session = Depends(get_db)):
+                       acting_user: str, db: Session = Depends(get_db)):
     r = db.query(models.Restaurant).filter(models.Restaurant.id == restaurant_id).first()
     if not r:
         raise HTTPException(404, "Restaurant not found")
+    if not check_permission(db, acting_user, "編輯餐廳資料", "update", r.created_by):
+        raise HTTPException(403, "沒有權限編輯此餐廳")
     if payload.name is not None:
         r.name = payload.name
     if payload.phone is not None:
@@ -196,6 +201,8 @@ def delete_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
     r = db.query(models.Restaurant).filter(models.Restaurant.id == restaurant_id).first()
     if not r:
         raise HTTPException(404, "Restaurant not found")
+    if not check_permission(db, acting_user, "編輯餐廳資料", "delete", r.created_by):
+        raise HTTPException(403, "沒有權限刪除此餐廳")
 
     open_order = db.query(models.Order).filter(
         models.Order.restaurant_id == restaurant_id, models.Order.status == "open").first()

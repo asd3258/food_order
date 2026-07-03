@@ -32,4 +32,7 @@ function setUiMode(mode: string) {
   <router-link v-if="userStore.isAdmin" to="/manage-users" class="card nav-card" style="text-decoration:none;color:inherit;display:flex;">
     <span class="nc-ic">👥</span><span class="nc-name">管理使用者</span><span class="chevron">›</span>
   </router-link>
+  <router-link v-if="userStore.isAdmin" to="/permissions" class="card nav-card" style="text-decoration:none;color:inherit;display:flex;">
+    <span class="nc-ic">🛡️</span><span class="nc-name">權限維護</span><span class="chevron">›</span>
+  </router-link>
 </template>

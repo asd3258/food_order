@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api, RESTAURANT_TYPES, type RestaurantDetail, type MenuItem } from '../api'
 import { confirmAction } from '../stores/confirm'
 import { toast } from '../stores/toast'
+import { userStore } from '../stores/user'
 import ImageLightbox from '../components/ImageLightbox.vue'
 import { requireLogin } from '../auth'
 import { optionsToGroups } from '../menuDraft'
@@ -217,7 +218,7 @@ async function save() {
         })),
       ),
     })),
-  })
+  }, userStore.currentUser!.name)
   for (const p of photos.value) {
     if (p.isNew) {
       await api.uploadPhoto(restaurantId, p.image_url, p.caption)
@@ -236,7 +237,7 @@ async function removeRestaurant() {
   const ok = await confirmAction(`確定要刪除「${name.value}」這間餐廳嗎?菜單/照片會一併刪除,此動作無法復原。`)
   if (!ok) return
   try {
-    await api.deleteRestaurant(restaurantId)
+    await api.deleteRestaurant(restaurantId, userStore.currentUser!.name)
   } catch {
     // api.ts already toasts the backend's error detail (e.g. "此餐廳目前有
     // 進行中的訂單...") -- nothing else to do here.

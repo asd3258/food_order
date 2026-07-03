@@ -230,3 +230,14 @@ class OrderHistoryPayment(Base):
     paid_at = Column(DateTime, nullable=True)
 
     history = relationship("OrderHistory", back_populates="payments")
+
+
+class PermissionRule(Base):
+    __tablename__ = "permission_rules"
+    id = Column(Integer, primary_key=True, index=True)
+    module = Column(String, index=True, nullable=False)
+    role = Column(String, index=True, nullable=False)  # "admin", "owner", "other", or username
+    can_create = Column(String, default="-")  # "V", "X", or "-"
+    can_read = Column(String, default="-")
+    can_update = Column(String, default="-")
+    can_delete = Column(String, default="-")

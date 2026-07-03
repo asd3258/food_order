@@ -172,6 +172,21 @@ export interface HistoryEntry {
   lines: HistoryLine[]
   payments: HistoryPayment[]
 }
+export interface PermissionRule {
+  id: number
+  module: string
+  role: string
+  can_create: string
+  can_read: string
+  can_update: string
+  can_delete: string
+}
+export interface PermissionRuleUpdate {
+  can_create: string
+  can_read: string
+  can_update: string
+  can_delete: string
+}
 
 export const RESTAURANT_TYPES = ['便當', '飲料', '牛排', '義大利麵']
 
@@ -207,10 +222,10 @@ export const api = {
   createRestaurant: (payload: any) => request<RestaurantDetail>('/api/restaurants', {
     method: 'POST', body: JSON.stringify(payload),
   }),
-  updateRestaurant: (id: number, payload: any) => request<RestaurantDetail>(`/api/restaurants/${id}`, {
+  updateRestaurant: (id: number, payload: any, actingUser: string) => request<RestaurantDetail>(`/api/restaurants/${id}${qs({ acting_user: actingUser })}`, {
     method: 'PUT', body: JSON.stringify(payload),
   }),
-  deleteRestaurant: (id: number) => request<void>(`/api/restaurants/${id}`, { method: 'DELETE' }),
+  deleteRestaurant: (id: number, actingUser: string) => request<void>(`/api/restaurants/${id}${qs({ acting_user: actingUser })}`, { method: 'DELETE' }),
   // v0.9: AI 菜單解析 -- send a photo (data URL), get back draft items to
   // review/edit before actually creating the restaurant. Gemini-first,
   // OpenAI-fallback happens entirely on the backend.
@@ -278,4 +293,14 @@ export const api = {
     { method: 'PATCH' }),
   deleteHistory: (historyId: number, actingUser: string) => request<void>(
     `/api/orders/history/${historyId}${qs({ acting_user: actingUser })}`, { method: 'DELETE' }),
+
+  // Permissions
+  listPermissions: (actingUser: string) => request<PermissionRule[]>(`/api/permissions${qs({ acting_user: actingUser })}`),
+  createPermission: (payload: any, actingUser: string) => request<PermissionRule>(`/api/permissions${qs({ acting_user: actingUser })}`, {
+    method: 'POST', body: JSON.stringify(payload)
+  }),
+  updatePermission: (id: number, payload: PermissionRuleUpdate, actingUser: string) => request<PermissionRule>(
+    `/api/permissions/${id}${qs({ acting_user: actingUser })}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deletePermission: (id: number, actingUser: string) => request<void>(
+    `/api/permissions/${id}${qs({ acting_user: actingUser })}`, { method: 'DELETE' }),
 }

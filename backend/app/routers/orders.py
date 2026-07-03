@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
 from app.database import get_db
-from app.permissions import is_admin_user
+from app.permissions import check_permission
 from app.ws_manager import manager
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
@@ -44,6 +44,8 @@ def create_order(payload: schemas.OrderCreateIn, bg_tasks: BackgroundTasks, db: 
     r = db.query(models.Restaurant).filter(models.Restaurant.id == payload.restaurant_id).first()
     if not r:
         raise HTTPException(404, "Restaurant not found")
+    if not check_permission(db, payload.initiator, "開單與投票", "create"):
+        raise HTTPException(403, "沒有權限發起訂單")
     order = models.Order(restaurant_id=payload.restaurant_id, initiator=payload.initiator,
                           deadline_at=payload.deadline_at,
                           source_vote_batch_id=payload.source_vote_batch_id)
@@ -83,7 +85,9 @@ def add_item(order_id: int, payload: schemas.OrderItemCreateIn, bg_tasks: Backgr
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order or order.status != "open":
         raise HTTPException(404, "Open order not found")
-    if order.is_locked and order.initiator != payload.user and not is_admin_user(db, payload.user):
+    if not check_permission(db, payload.user, "訂單", "update", order.initiator):
+        raise HTTPException(403, "沒有權限新增品項")
+    if order.is_locked and not check_permission(db, payload.user, "訂單", "delete", order.initiator):
         raise HTTPException(403, "此訂單已鎖單，無法新增品項")
     item = models.OrderItem(order_id=order_id, user=payload.user, menu_item_id=payload.menu_item_id,
                              selected_options=payload.selected_options, quantity=payload.quantity,
@@ -103,7 +107,9 @@ def update_own_item(order_id: int, item_id: int, payload: schemas.OrderItemCreat
     if not item:
         raise HTTPException(404, "Item not found")
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
-    if order and order.is_locked and order.initiator != payload.user and not is_admin_user(db, payload.user):
+    if order and not check_permission(db, payload.user, "訂單", "update", order.initiator):
+        raise HTTPException(403, "沒有權限修改品項")
+    if order and order.is_locked and not check_permission(db, payload.user, "訂單", "delete", order.initiator):
         raise HTTPException(403, "此訂單已鎖單，無法修改品項")
     if item.user != payload.user:
         raise HTTPException(403, "只能修改自己加入的品項")
@@ -124,7 +130,9 @@ def remove_own_item(order_id: int, item_id: int, user: str, bg_tasks: Background
     if not item:
         raise HTTPException(404, "Item not found")
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
-    if order and order.is_locked and order.initiator != user and not is_admin_user(db, user):
+    if order and not check_permission(db, user, "訂單", "update", order.initiator):
+        raise HTTPException(403, "沒有權限移除品項")
+    if order and order.is_locked and not check_permission(db, user, "訂單", "delete", order.initiator):
         raise HTTPException(403, "此訂單已鎖單，無法移除品項")
     if item.user != user:
         raise HTTPException(403, "只能移除自己加入的品項")
@@ -140,7 +148,7 @@ def soft_delete_item(order_id: int, item_id: int, acting_user: str, bg_tasks: Ba
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
-    if order.initiator != acting_user and not is_admin_user(db, acting_user):
+    if not check_permission(db, acting_user, "訂單", "delete", order.initiator):
         raise HTTPException(403, "只有發起者可以刪除其他人的品項")
     item = db.query(models.OrderItem).filter(models.OrderItem.id == item_id,
                                                models.OrderItem.order_id == order_id).first()
@@ -160,7 +168,7 @@ def update_deadline(order_id: int, payload: schemas.DeadlineIn, acting_user: str
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
-    if order.initiator != acting_user and not is_admin_user(db, acting_user):
+    if not check_permission(db, acting_user, "訂單", "delete", order.initiator):
         raise HTTPException(403, "只有發起者可以修改截止時間")
     order.deadline_at = payload.deadline_at
     db.commit()
@@ -175,7 +183,7 @@ def close_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: 
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
-    if order.initiator != acting_user and not is_admin_user(db, acting_user):
+    if not check_permission(db, acting_user, "訂單", "delete", order.initiator):
         raise HTTPException(403, "只有發起者可以結單")
     r = db.query(models.Restaurant).filter(models.Restaurant.id == order.restaurant_id).first()
 
@@ -215,7 +223,7 @@ def lock_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: S
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
-    if order.initiator != acting_user and not is_admin_user(db, acting_user):
+    if not check_permission(db, acting_user, "訂單", "delete", order.initiator):
         raise HTTPException(403, "只有發起者可以鎖定訂單")
     order.is_locked = True
     db.commit()
@@ -230,7 +238,7 @@ def unlock_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db:
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
-    if order.initiator != acting_user and not is_admin_user(db, acting_user):
+    if not check_permission(db, acting_user, "訂單", "delete", order.initiator):
         raise HTTPException(403, "只有發起者可以解除鎖單")
     order.is_locked = False
     db.commit()
@@ -245,7 +253,7 @@ def delete_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db:
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
-    if order.initiator != acting_user and not is_admin_user(db, acting_user):
+    if not check_permission(db, acting_user, "訂單", "delete", order.initiator):
         raise HTTPException(403, "只有發起者可以刪除訂單")
     order.status = "deleted"
     db.commit()
