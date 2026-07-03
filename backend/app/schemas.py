@@ -20,6 +20,11 @@ class UserOut(BaseModel):
     name: str
     order_count: int = 0  # how many OrderHistoryLine rows mention this name -- powers 快速登入 ordering
     is_admin: bool = False
+    ui_mode: str = "normal"  # v0.11: "normal" | "large" -- 大字模式偏好
+
+
+class UiModeIn(BaseModel):
+    ui_mode: str  # "normal" | "large"
 
 
 # ---------- Menu item options ----------
@@ -90,6 +95,7 @@ class RestaurantSummaryOut(BaseModel):
     type: str
     phone: str
     address: str
+    created_at: dt.datetime
 
 
 class RestaurantDetailOut(RestaurantSummaryOut):
@@ -102,11 +108,6 @@ class RestaurantDetailOut(RestaurantSummaryOut):
 class PhotoUploadIn(BaseModel):
     image_url: str  # data URL from the client (FileReader)
     caption: str = ""
-
-
-# ---------- v0.11: 餐廳清單手動排序 ----------
-class RestaurantReorderIn(BaseModel):
-    ids: List[int]  # 完整的餐廳 id 清單,依你想要的順序排列
 
 
 class MenuParseIn(BaseModel):

@@ -67,7 +67,7 @@ function handleMenuPhoto(e: Event) {
         toast('AI 沒有從照片中辨識出品項,請確認照片清晰或改用手動輸入')
       } else {
         for (const it of parsed) {
-          items.value.push({ name: it.name, price: it.price, category: '', optionGroups: optionsToGroups(it.options) })
+          items.value.push({ name: it.name, price: it.price, category: it.category || '', optionGroups: optionsToGroups(it.options) })
         }
         toast(`AI 已辨識出 ${parsed.length} 個品項,請檢查並修正後再建立餐廳`)
       }

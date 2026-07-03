@@ -158,3 +158,44 @@ select.time-select,input.time-select{padding:8px 9px;border:1px solid var(--bord
 .photo-thumb .ph-rm{position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#242424;color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:80;}
 .toast.show{opacity:1;}
+
+/* v0.11: 大字模式 -- 放大常見畫面上的圖示與文字,方便老花的人使用。這裡只覆蓋
+   最常出現、最需要看清楚的元素(標題/導覽/清單/按鈕/表單),不是每一條 CSS 規則
+   都逐一放大,以免大改整份樣式表。切換方式見 MoreView.vue + stores/user.ts。 */
+html.large-mode header.topbar .title{font-size:22px;}
+html.large-mode .login-status{font-size:16px;}
+html.large-mode .login-bar button{font-size:16px;padding:10px 18px;}
+html.large-mode .lockout-box p{font-size:17px;}
+html.large-mode .lockout-box .btn{font-size:17px;}
+html.large-mode .page-header h1{font-size:23px;}
+html.large-mode .page-header .back{font-size:28px;}
+html.large-mode section.block h2{font-size:15px;}
+html.large-mode .card-clickable .name{font-size:19px;}
+html.large-mode .card-clickable .sub{font-size:15px;}
+html.large-mode .chevron{font-size:24px;}
+html.large-mode .empty{font-size:17px;}
+html.large-mode nav.bottomnav a{font-size:14px;padding:14px 2px 10px;}
+html.large-mode nav.bottomnav a .ic{font-size:30px;}
+html.large-mode .nav-card .nc-ic{font-size:30px;width:44px;}
+html.large-mode .nav-card .nc-name{font-size:19px;}
+html.large-mode button.btn{font-size:17px;padding:14px 18px;}
+html.large-mode .search-row input{font-size:16px;padding:12px 14px;}
+html.large-mode .type-chip{font-size:16px;padding:9px 18px;}
+html.large-mode .menu-item .mi-name{font-size:18px;}
+html.large-mode .menu-item .mi-price{font-size:15px;}
+html.large-mode .quick-login-item .qname{font-size:17px;}
+html.large-mode .quick-login-item .qcount{font-size:13px;}
+html.large-mode .manage-user-row .mname{font-size:17px;}
+html.large-mode .manage-user-row .mlink{font-size:14px;}
+html.large-mode .form-group label{font-size:15px;}
+html.large-mode .form-group input,html.large-mode .form-group select,html.large-mode .form-group textarea{font-size:16px;padding:12px 13px;}
+html.large-mode .checkbox-item .cname{font-size:16px;}
+html.large-mode .checkbox-item input{width:22px;height:22px;}
+html.large-mode .info-row{font-size:16px;}
+html.large-mode .stat-table{font-size:15px;}
+html.large-mode .history-card .hc-head{font-size:16px;}
+html.large-mode .payment-row{font-size:16px;}
+html.large-mode .cart-bar{font-size:16px;}
+html.large-mode .cart-line{font-size:15px;}
+html.large-mode .plus-badge{width:34px;height:34px;font-size:20px;}
+html.large-mode .disabled-feature{font-size:14px;}

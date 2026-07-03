@@ -43,6 +43,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     is_admin = Column(Boolean, default=False)  # v0.7: gates 管理使用者 + 刪除歷史訂單
+    ui_mode = Column(String, default="normal")  # v0.11: "normal" | "large" -- 大字模式偏好,跟著帳號走
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
@@ -55,7 +56,6 @@ class Restaurant(Base):
     address = Column(String, default="")
     map_url = Column(String, default="")
     hours = Column(Text, default="")  # v0.10: 營業時間, free-text (textarea), e.g. from Google Places or typed by hand
-    sort_order = Column(Integer, default=0)  # v0.11: 餐廳清單手動排序,數字小的排前面
     type = Column(String, nullable=False, default="便當")  # 便當/飲料/牛排/義大利麵
     created_by = Column(String, default="")
     created_at = Column(DateTime, default=utcnow)

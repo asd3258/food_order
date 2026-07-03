@@ -21,13 +21,17 @@ def _restaurant_query(db: Session):
 
 
 @router.get("", response_model=list[schemas.RestaurantSummaryOut])
-def list_restaurants(q: Optional[str] = None, type: Optional[str] = None,
+def list_restaurants(q: Optional[str] = None, type: Optional[str] = None, sort: str = "created_desc",
                       db: Session = Depends(get_db)):
     """v0.5: `q` matches restaurant name OR any menu item name; `type` filters
     by restaurant type. Both combine with AND, matching SPEC.md section 3.
-    v0.11: ordered by sort_order (手動排序) first, id as a stable tiebreaker
-    for restaurants that haven't been manually reordered yet."""
-    query = db.query(models.Restaurant).order_by(models.Restaurant.sort_order, models.Restaurant.id)
+    v0.11: `sort` replaces the old manual drag-to-reorder feature with two
+    fixed presets -- "created_desc" (預設,建立時間新到舊) or "name" (名稱排序)."""
+    query = db.query(models.Restaurant)
+    if sort == "name":
+        query = query.order_by(models.Restaurant.name)
+    else:
+        query = query.order_by(models.Restaurant.created_at.desc(), models.Restaurant.id.desc())
     if type:
         query = query.filter(models.Restaurant.type == type)
     restaurants = query.all()
@@ -45,18 +49,6 @@ def list_restaurants(q: Optional[str] = None, type: Optional[str] = None,
                     filtered.append(r)
             restaurants = filtered
     return restaurants
-
-
-@router.post("/reorder", status_code=204)
-def reorder_restaurants(payload: schemas.RestaurantReorderIn, db: Session = Depends(get_db)):
-    """v0.11: 餐廳清單手動排序。前端傳完整的 id 清單(依想要的順序),這裡直接把
-    每個 id 的 sort_order 設成它在清單裡的索引值。只在「沒有套用搜尋/類型篩選」
-    的情況下呼叫 -- 篩選中的子集不代表完整順序,前端會擋掉那個情境。"""
-    for index, restaurant_id in enumerate(payload.ids):
-        db.query(models.Restaurant).filter(models.Restaurant.id == restaurant_id).update(
-            {"sort_order": index}, synchronize_session=False)
-    db.commit()
-    return None
 
 
 @router.get("/types", response_model=list[str])
@@ -181,14 +173,22 @@ def delete_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/parse-menu", response_model=list[schemas.MenuItemIn])
-def parse_menu(payload: schemas.MenuParseIn):
+def parse_menu(payload: schemas.MenuParseIn, db: Session = Depends(get_db)):
     """v0.9: AI-assisted 品項 extraction from a photo of a menu -- see
     app/ai_menu.py for the Gemini-first/OpenAI-fallback logic. Returns
     unsaved draft items (no restaurant_id involved yet) for the frontend to
     drop into the editable 品項清單 for a human to review/fix before the
-    restaurant is actually created or saved."""
+    restaurant is actually created or saved.
+
+    v0.11: also asks for a 分類 suggestion per item in this SAME AI call
+    (using every other already-categorized (name, category) pair in the DB
+    as reference, same idea as /classify-categories) instead of a separate
+    round trip right after uploading -- one AI call instead of two every
+    time someone uploads a menu photo."""
+    reference = db.query(models.MenuItem.name, models.MenuItem.category).filter(
+        models.MenuItem.category.isnot(None), models.MenuItem.category != "").distinct().limit(500).all()
     try:
-        return parse_menu_photo(payload.image_url)
+        return parse_menu_photo(payload.image_url, [(n, c) for n, c in reference])
     except MenuParseError as exc:
         raise HTTPException(400, str(exc))
 

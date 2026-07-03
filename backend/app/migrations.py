@@ -46,6 +46,18 @@ def _add_column_if_missing(table: str, column: str, coltype: str, default_sql: s
         pass  # already exists
 
 
+def _drop_column_if_exists(table: str, column: str) -> None:
+    """Inverse of _add_column_if_missing -- also safe to call every startup;
+    Postgres raises UndefinedColumn if it's already gone and this just
+    swallows it."""
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(f"ALTER TABLE {table} DROP COLUMN {column}"))
+        print(f"[migrations] dropped {table}.{column}")
+    except Exception:
+        pass  # already gone
+
+
 def _migrate_photos_to_object_storage(db) -> None:
     """v0.11: move any already-stored `data:` base64 photos into MinIO,
     replacing the row's image_url with the new /media/... path -- see
@@ -75,8 +87,10 @@ def run_light_migrations() -> None:
     # v0.10: 營業時間 on restaurants, 分類 on menu_items.
     _add_column_if_missing("restaurants", "hours", "TEXT")
     _add_column_if_missing("menu_items", "category", "VARCHAR")
-    # v0.11: 餐廳清單手動排序。
-    _add_column_if_missing("restaurants", "sort_order", "INTEGER", default_sql="0")
+    # v0.11: 餐廳清單改成固定排序按鈕(建立時間/名稱),手動排序欄位移除。
+    _drop_column_if_exists("restaurants", "sort_order")
+    # v0.11: 大字模式偏好跟著使用者帳號走。
+    _add_column_if_missing("users", "ui_mode", "VARCHAR", default_sql="'normal'")
 
     # v0.11: make sure the MinIO bucket exists/is public-read before the
     # photo backfill below tries to use it.

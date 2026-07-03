@@ -21,7 +21,7 @@ def _order_counts(db: Session) -> dict:
 
 def _to_out(u: models.User, counts: dict) -> schemas.UserOut:
     return schemas.UserOut(id=u.id, name=u.name, order_count=counts.get(u.name, 0),
-                            is_admin=bool(u.is_admin))
+                            is_admin=bool(u.is_admin), ui_mode=u.ui_mode or "normal")
 
 
 @router.get("", response_model=list[schemas.UserOut])
@@ -74,6 +74,21 @@ def rename_user(user_id: int, payload: schemas.UserRenameIn, acting_user: str,
     if not u:
         raise HTTPException(404, "User not found")
     u.name = validate_user_name(payload.name)
+    db.commit()
+    db.refresh(u)
+    return _to_out(u, _order_counts(db))
+
+
+@router.patch("/{user_id}/ui-mode", response_model=schemas.UserOut)
+def update_ui_mode(user_id: int, payload: schemas.UiModeIn, db: Session = Depends(get_db)):
+    """v0.11: 大字模式偏好跟著帳號走,不是本機瀏覽器設定 -- 換裝置/換人登入都會套用
+    最後一次選的模式。個人偏好,不用 admin 權限(誰都能改自己的)。"""
+    if payload.ui_mode not in ("normal", "large"):
+        raise HTTPException(400, "ui_mode 必須是 normal 或 large")
+    u = db.query(models.User).filter(models.User.id == user_id).first()
+    if not u:
+        raise HTTPException(404, "User not found")
+    u.ui_mode = payload.ui_mode
     db.commit()
     db.refresh(u)
     return _to_out(u, _order_counts(db))

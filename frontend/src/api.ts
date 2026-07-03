@@ -78,6 +78,7 @@ export interface RestaurantSummary {
   type: string
   phone: string
   address: string
+  created_at: string
 }
 export interface RestaurantDetail extends RestaurantSummary {
   map_url: string
@@ -88,6 +89,7 @@ export interface RestaurantDetail extends RestaurantSummary {
 export interface AiMenuItemDraft {
   name: string
   price: number
+  category: string
   options: OptionChoice[]
 }
 export interface PlaceInfo {
@@ -156,6 +158,7 @@ export interface UserProfile {
   name: string
   order_count: number
   is_admin: boolean
+  ui_mode: string
 }
 export interface HistoryEntry {
   id: number
@@ -183,16 +186,16 @@ export const api = {
     }),
   deleteUser: (id: number, actingUser: string) => request<void>(
     `/api/users/${id}${qs({ acting_user: actingUser })}`, { method: 'DELETE' }),
+  // v0.11: 大字模式偏好跟著帳號走 -- 不用 admin 權限,任何人都能改自己的。
+  updateUiMode: (id: number, uiMode: string) => request<UserProfile>(
+    `/api/users/${id}/ui-mode`, { method: 'PATCH', body: JSON.stringify({ ui_mode: uiMode }) }),
 
   // Restaurants
-  listRestaurants: (q?: string, type?: string) => request<RestaurantSummary[]>(
-    `/api/restaurants${qs({ q, type })}`),
+  // v0.11: `sort` -- "created_desc"(預設,建立時間新到舊)或 "name"(名稱排序),
+  // 取代舊的手動拖曳排序(見 RestaurantListView.vue)。
+  listRestaurants: (q?: string, type?: string, sort?: string) => request<RestaurantSummary[]>(
+    `/api/restaurants${qs({ q, type, sort })}`),
   listRestaurantTypes: () => request<string[]>('/api/restaurants/types'),
-  // v0.11: 手動排序 -- 傳完整的 id 清單(依想要的順序),只在沒有套用搜尋/類型
-  // 篩選時呼叫(見 RestaurantListView.vue)。
-  reorderRestaurants: (ids: number[]) => request<void>('/api/restaurants/reorder', {
-    method: 'POST', body: JSON.stringify({ ids }),
-  }),
   getRestaurantMenu: (id: number) => request<RestaurantDetail>(`/api/restaurants/${id}/menu`),
   createRestaurant: (payload: any) => request<RestaurantDetail>('/api/restaurants', {
     method: 'POST', body: JSON.stringify(payload),
