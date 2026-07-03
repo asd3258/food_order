@@ -79,6 +79,7 @@ export interface RestaurantSummary {
   phone: string
   address: string
   created_at: string
+  created_by: string
   is_favorite: boolean
 }
 export interface RestaurantDetail extends RestaurantSummary {
