@@ -37,7 +37,10 @@ const groupedMenu = computed(() => {
   return sorted.map((category) => ({ category, items: groups[category] }))
 })
 
-const isInitiator = computed(() => order.value?.initiator === userStore.username)
+// v0.12: mike_admin 的權限跟發起者相同 -- 結單/刪除/改截止時間/軟刪除他人品項
+// 這些按鈕,admin 帳號即使不是這筆訂單的發起者也要看得到(後端 orders.py 已經
+// 放寬,前端這裡卻只看 initiator 字串比對,按鈕才一直沒出現)。
+const isInitiator = computed(() => order.value?.initiator === userStore.username || userStore.isAdmin)
 const myLines = computed(() => stats.value.filter((s) => s.user === userStore.username && !s.is_deleted))
 const myTotal = computed(() => myLines.value.reduce((sum, l) => sum + l.amount, 0))
 

@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, type UserProfile } from '../api'
 import { userStore } from '../stores/user'
-import { alertWarning } from '../stores/confirm'
+import { alertWarning, confirmAction } from '../stores/confirm'
 import { validateUserName } from '../validate'
 
 const router = useRouter()
@@ -65,7 +65,11 @@ async function loginWithInput() {
   await userStore.loginAs(name)
   router.push('/')
 }
+// v0.12: 快速登入清單一鍵登入很容易手滑點錯人,加一個 Yes/No 確認,選 Yes 才
+// 真的登入。
 async function quickLogin(u: UserProfile) {
+  const ok = await confirmAction(`確定要以「${u.name}」的身分登入嗎?`)
+  if (!ok) return
   await userStore.loginAs(u.name)
   router.push('/')
 }
@@ -97,7 +101,6 @@ async function quickLogin(u: UserProfile) {
       <div class="quick-login-group-header">{{ g.letter }}</div>
       <div v-for="u in g.users" :key="u.id" class="quick-login-item" @click="quickLogin(u)">
         <span class="qname">{{ u.name }}</span>
-        <span v-if="u.order_count > 0" class="qcount">{{ u.order_count }} 次</span>
       </div>
     </template>
   </section>

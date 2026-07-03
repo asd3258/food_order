@@ -91,7 +91,7 @@ async function handleAction() {
     <div v-if="restaurants.length === 0" class="empty">找不到符合的餐廳</div>
     <label v-else v-for="r in restaurants" :key="r.id" class="checkbox-item">
       <input type="checkbox" :checked="selected.has(r.id)" @change="toggle(r.id, ($event.target as HTMLInputElement).checked)" />
-      <span class="cname">{{ r.name }} <span style="color:var(--muted);font-weight:400;font-size:11px;">({{ r.type }})</span><span class="fav-star-static">{{ r.is_favorite ? '★' : '☆' }}</span></span>
+      <span class="cname">{{ r.name }} <span style="color:var(--muted);font-weight:400;font-size:11px;">({{ r.type }})</span><span v-if="r.is_favorite" class="fav-star-static">★</span></span>
     </label>
 
     <div class="deadline-row">

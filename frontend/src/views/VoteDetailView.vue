@@ -16,7 +16,10 @@ const batch = ref<VoteBatchOut | null>(null)
 const editDeadline = ref<DeadlineParts | null>(null)
 const pendingSelection = ref<number | null>(null)
 
-const isInitiator = computed(() => batch.value?.initiator === userStore.username)
+// v0.12: mike_admin 的權限跟發起者相同 -- 開票/刪除/改截止時間這些按鈕,
+// admin 帳號即使不是這筆投票的發起者也要看得到(後端 votes.py 已經放寬,前端
+// 這裡卻只看 initiator 字串比對,按鈕才一直沒出現)。
+const isInitiator = computed(() => batch.value?.initiator === userStore.username || userStore.isAdmin)
 
 async function load() {
   batch.value = await api.getVote(batchId, userStore.username)
