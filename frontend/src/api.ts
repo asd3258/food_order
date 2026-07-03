@@ -188,6 +188,11 @@ export interface PermissionRuleUpdate {
   can_delete: string
 }
 
+export interface ModulePermissions {
+  global: { create: boolean; read: boolean; update: boolean; delete: boolean }
+  owned: { create: boolean; read: boolean; update: boolean; delete: boolean }
+}
+
 export const RESTAURANT_TYPES = ['便當', '飲料', '牛排', '義大利麵']
 
 export const api = {
@@ -295,6 +300,7 @@ export const api = {
     `/api/orders/history/${historyId}${qs({ acting_user: actingUser })}`, { method: 'DELETE' }),
 
   // Permissions
+  getMyPermissions: (actingUser: string) => request<Record<string, ModulePermissions>>(`/api/permissions/me${qs({ acting_user: actingUser })}`),
   listPermissions: (actingUser: string) => request<PermissionRule[]>(`/api/permissions${qs({ acting_user: actingUser })}`),
   createPermission: (payload: any, actingUser: string) => request<PermissionRule>(`/api/permissions${qs({ acting_user: actingUser })}`, {
     method: 'POST', body: JSON.stringify(payload)

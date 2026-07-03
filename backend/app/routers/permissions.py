@@ -12,6 +12,26 @@ def list_permissions(acting_user: str, db: Session = Depends(get_db)):
         raise HTTPException(403, "沒有權限查看")
     return db.query(models.PermissionRule).all()
 
+@router.get("/me", response_model=dict[str, dict[str, dict[str, bool]]])
+def get_my_permissions(acting_user: str, db: Session = Depends(get_db)):
+    modules = ["歷史訂單", "建立餐廳", "權限維護", "編輯餐廳資料", "開單與投票", "訂單", "投票"]
+    result = {}
+    for mod in modules:
+        global_perms = {
+            "create": check_permission(db, acting_user, mod, "create"),
+            "read": check_permission(db, acting_user, mod, "read"),
+            "update": check_permission(db, acting_user, mod, "update"),
+            "delete": check_permission(db, acting_user, mod, "delete"),
+        }
+        owned_perms = {
+            "create": check_permission(db, acting_user, mod, "create", acting_user),
+            "read": check_permission(db, acting_user, mod, "read", acting_user),
+            "update": check_permission(db, acting_user, mod, "update", acting_user),
+            "delete": check_permission(db, acting_user, mod, "delete", acting_user),
+        }
+        result[mod] = {"global": global_perms, "owned": owned_perms}
+    return result
+
 @router.post("", response_model=schemas.PermissionRuleOut)
 def create_permission(payload: schemas.PermissionRuleCreateIn, acting_user: str, db: Session = Depends(get_db)):
     if not check_permission(db, acting_user, "權限維護", "create"):

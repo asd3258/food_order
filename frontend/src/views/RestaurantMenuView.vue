@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type RestaurantDetail, type MenuItem, type OptionChoice, type Photo } from '../api'
+import { userStore } from '../stores/user'
 import ImageLightbox from '../components/ImageLightbox.vue'
 import { copyText } from '../share'
 
@@ -95,7 +96,7 @@ function copyMapLink(r: RestaurantDetail) {
     <h1>{{ restaurant?.name || '餐廳菜單' }}</h1>
   </div>
 
-  <button class="btn btn-secondary btn-full" style="margin-bottom:14px;" @click="goEdit">✏️ 編輯餐廳資料</button>
+  <button v-if="restaurant && userStore.can('編輯餐廳資料', 'update', restaurant.created_by)" class="btn btn-secondary btn-full" style="margin-bottom:14px;" @click="goEdit">✏️ 編輯餐廳資料</button>
 
   <template v-if="restaurant">
     <template v-if="restaurant.menu_items.length">

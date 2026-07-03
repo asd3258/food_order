@@ -16,10 +16,11 @@ const batch = ref<VoteBatchOut | null>(null)
 const editDeadline = ref<DeadlineParts | null>(null)
 const pendingSelection = ref<number | null>(null)
 
-// v0.12: mike_admin 的權限跟發起者相同 -- 開票/刪除/改截止時間這些按鈕,
-// admin 帳號即使不是這筆投票的發起者也要看得到(後端 votes.py 已經放寬,前端
-// 這裡卻只看 initiator 字串比對,按鈕才一直沒出現)。
-const isInitiator = computed(() => batch.value?.initiator === userStore.username || userStore.isAdmin)
+// v0.12: 改用 userStore.can 統一判斷權限
+const isInitiator = computed(() => {
+  if (!batch.value) return false
+  return userStore.can('投票', 'delete', batch.value.initiator)
+})
 
 async function load() {
   batch.value = await api.getVote(batchId, userStore.username)
@@ -158,7 +159,7 @@ function doShare() {
           <span class="cname">{{ c.restaurant_name }}</span>
           <span style="font-size:12px;color:var(--muted);background:#f0f0f0;padding:2px 8px;border-radius:10px;">{{ c.count }} 票</span>
         </label>
-        <div class="btn-row" style="margin-top:10px;margin-bottom:0;">
+        <div class="btn-row" style="margin-top:10px;margin-bottom:0;" v-if="userStore.can('投票', 'update', batch.initiator)">
           <button v-if="!batch.my_locked" class="btn btn-primary" @click="save">Save</button>
           <button v-else class="btn btn-primary" @click="edit">Edit</button>
         </div>

@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { api } from '../api'
+import { api, type ModulePermissions } from '../api'
 import { toast } from './toast'
 
 const STORAGE_KEY = 'food_order_user_id'
@@ -43,6 +43,7 @@ export const userStore = reactive({
   username: '',
   isAdmin: false,
   uiMode: 'normal' as string,  // v0.11: "normal" | "large" -- 大字模式,跟著帳號走
+  permissions: null as Record<string, ModulePermissions> | null,
   get isLoggedIn(): boolean {
     return this.userId !== null
   },
@@ -67,11 +68,13 @@ export const userStore = reactive({
       this.uiMode = profile.ui_mode || 'normal'
       applyUiModeClass(this.uiMode)
       localStorage.setItem(UI_MODE_KEY, this.uiMode)
+      this.permissions = await api.getMyPermissions(this.username)
     } catch {
       // Deleted from the roster, or backend not reachable yet -- fall back
       // to logged-out rather than silently acting as a name that no longer
       // exists.
       localStorage.removeItem(STORAGE_KEY)
+      this.permissions = null
     }
   },
 
@@ -87,6 +90,11 @@ export const userStore = reactive({
     applyUiModeClass(this.uiMode)
     localStorage.setItem(STORAGE_KEY, String(profile.id))
     localStorage.setItem(UI_MODE_KEY, this.uiMode)
+    try {
+      this.permissions = await api.getMyPermissions(this.username)
+    } catch {
+      this.permissions = null
+    }
     toast(`已登入:${profile.name}`)
   },
 
@@ -105,6 +113,18 @@ export const userStore = reactive({
     this.userId = null
     this.username = ''
     this.isAdmin = false
+    this.permissions = null
     localStorage.removeItem(STORAGE_KEY)
   },
+
+  can(module: string, action: 'create' | 'read' | 'update' | 'delete', owner?: string): boolean {
+    // wait for network to resolve permissions. If absent, fallback to false.
+    if (!this.permissions) return false
+    const mod = this.permissions[module]
+    if (!mod) return false
+    if (owner && owner === this.username) {
+      return mod.owned[action]
+    }
+    return mod.global[action]
+  }
 })

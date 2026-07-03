@@ -75,6 +75,8 @@ def save_my_choice(batch_id: int, payload: schemas.VoteChoiceIn, bg_tasks: Backg
     batch = db.query(models.VoteBatch).filter(models.VoteBatch.id == batch_id).first()
     if not batch or batch.status != "open":
         raise HTTPException(404, "Open vote batch not found")
+    if not check_permission(db, payload.user, "投票", "update", batch.initiator):
+        raise HTTPException(403, "沒有權限投票")
     vote = db.query(models.Vote).filter(models.Vote.vote_batch_id == batch_id,
                                          models.Vote.user == payload.user).first()
     if not vote:
@@ -97,6 +99,8 @@ def clear_my_choice(batch_id: int, user: str, bg_tasks: BackgroundTasks, db: Ses
     batch = db.query(models.VoteBatch).filter(models.VoteBatch.id == batch_id).first()
     if not batch or batch.status != "open":
         raise HTTPException(404, "Open vote batch not found")
+    if not check_permission(db, user, "投票", "update", batch.initiator):
+        raise HTTPException(403, "沒有權限移除投票")
     vote = db.query(models.Vote).filter(models.Vote.vote_batch_id == batch_id,
                                          models.Vote.user == user).first()
     if vote:

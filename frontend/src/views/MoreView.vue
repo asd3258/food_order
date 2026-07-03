@@ -22,17 +22,17 @@ function setUiMode(mode: string) {
     </div>
   </div>
 
-  <router-link to="/history" class="card nav-card" style="text-decoration:none;color:inherit;display:flex;">
+  <router-link v-if="userStore.can('歷史訂單', 'read')" to="/history" class="card nav-card" style="text-decoration:none;color:inherit;display:flex;">
     <span class="nc-ic">🕘</span><span class="nc-name">歷史訂單</span><span class="chevron">›</span>
   </router-link>
-  <router-link to="/create-restaurant" class="card nav-card" style="text-decoration:none;color:inherit;display:flex;">
+  <router-link v-if="userStore.can('建立餐廳', 'create')" to="/create-restaurant" class="card nav-card" style="text-decoration:none;color:inherit;display:flex;">
     <span class="nc-ic">➕</span><span class="nc-name">建立餐廳</span><span class="chevron">›</span>
   </router-link>
   <!-- v0.7: 管理使用者 is admin-only now -- hidden entirely for regular users. -->
   <router-link v-if="userStore.isAdmin" to="/manage-users" class="card nav-card" style="text-decoration:none;color:inherit;display:flex;">
     <span class="nc-ic">👥</span><span class="nc-name">管理使用者</span><span class="chevron">›</span>
   </router-link>
-  <router-link v-if="userStore.isAdmin" to="/permissions" class="card nav-card" style="text-decoration:none;color:inherit;display:flex;">
+  <router-link v-if="userStore.can('權限維護', 'read')" to="/permissions" class="card nav-card" style="text-decoration:none;color:inherit;display:flex;">
     <span class="nc-ic">🛡️</span><span class="nc-name">權限維護</span><span class="chevron">›</span>
   </router-link>
 </template>

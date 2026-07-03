@@ -108,6 +108,6 @@ async function handleAction() {
       </div>
     </div>
 
-    <button class="btn btn-primary btn-full" :disabled="buttonDisabled" @click="handleAction">{{ buttonLabel }}</button>
+    <button v-if="userStore.can('開單與投票', 'create')" class="btn btn-primary btn-full" :disabled="buttonDisabled" @click="handleAction">{{ buttonLabel }}</button>
   </section>
 </template>
