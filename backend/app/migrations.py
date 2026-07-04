@@ -213,8 +213,7 @@ def run_light_migrations() -> None:
     with SessionLocal() as db:
         try:
             _rename_admin_mike_to_mike_admin(db)
-            _fix_null_prices(db)
-            _seed_permission_rules(db)
+            _seed_default_permissions(db)
             _seed_restaurant_types(db)
             _migrate_photos_to_object_storage(db)
         finally:
