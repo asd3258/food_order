@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api, type VoteBatchOut } from '../api'
 import { HOURS, MINUTES, formatDeadline, isoToParts, partsToIso, type DeadlineParts } from '../deadline'
 import { userStore } from '../stores/user'
-import { confirmAction } from '../stores/confirm'
+import { confirmAction, alertWarning } from '../stores/confirm'
 import { toast } from '../stores/toast'
 import { canWebShare, copyLink, shareLink } from '../share'
 import { requireLogin } from '../auth'
@@ -22,7 +22,10 @@ const isInitiator = computed(() => {
   return userStore.can('投票', 'delete', batch.value.initiator)
 })
 
+const attemptedSubmit = ref(false)
 const isDeadlineInvalid = computed(() => {
+  if (batch.value?.status !== 'open') return false
+  if (!attemptedSubmit.value) return false
   if (!editDeadline.value) return false
   return new Date(partsToIso(editDeadline.value)).getTime() < Date.now()
 })
@@ -62,9 +65,10 @@ onUnmounted(() => {
 
 async function updateDeadline() {
   if (!editDeadline.value) return
+  attemptedSubmit.value = true
   const isoDeadline = partsToIso(editDeadline.value)
   if (new Date(isoDeadline).getTime() < Date.now()) {
-    toast('截止時間不能早於現在')
+    await alertWarning('截止時間不能早於現在')
     return
   }
   await api.updateVoteDeadline(batchId, isoDeadline, userStore.username)

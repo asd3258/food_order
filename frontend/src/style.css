@@ -85,6 +85,7 @@ button.btn{border:none;border-radius:10px;padding:11px 16px;font-size:14px;font-
 button.btn-primary{background:var(--brand);color:#fff;}
 button.btn-secondary{background:#eceaf9;color:var(--brand);}
 button.btn-danger{background:var(--danger);color:#fff;}
+button:disabled, .btn:disabled{opacity:0.5;cursor:not-allowed;pointer-events:none;}
 button.btn-primary:disabled{background:#c9c8e6;cursor:not-allowed;}
 button.btn-full{width:100%;}
 .btn-row{display:flex;gap:10px;margin-bottom:14px;}
@@ -214,5 +215,5 @@ html.large-mode .plus-badge{width:34px;height:34px;font-size:20px;}
 html.large-mode .disabled-feature{font-size:14px;}
 
 .text-danger { color: #e74c3c; }
-.time-select-invalid { border: 2px solid #e74c3c !important; background-color: #fdf2f1 !important; }
-.card-mine { border: 2px solid var(--primary); background-color: rgba(43, 108, 176, 0.03); }
+.time-select-invalid { border: 1px solid var(--danger) !important; background-color: #fdf2f1 !important; }
+.card-mine { border-left: 4px solid var(--brand); background-color: rgba(43, 108, 176, 0.03); }

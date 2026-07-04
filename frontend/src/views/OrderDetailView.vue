@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api, type OrderOut, type RestaurantDetail, type MenuItem, type StatRow } from '../api'
 import { HOURS, MINUTES, formatDeadline, isoToParts, partsToIso, type DeadlineParts, defaultDeadline } from '../deadline'
 import { userStore } from '../stores/user'
-import { confirmAction } from '../stores/confirm'
+import { confirmAction, alertWarning } from '../stores/confirm'
 import { toast } from '../stores/toast'
 import { canWebShare, copyLink, copyText, shareLink } from '../share'
 import { requireLogin } from '../auth'
@@ -51,7 +51,10 @@ const canModify = computed(() => {
 })
 const myLines = computed(() => stats.value.filter((s) => s.user === userStore.username && !s.is_deleted))
 const myTotal = computed(() => myLines.value.reduce((sum, l) => sum + l.amount, 0))
+const attemptedSubmit = ref(false)
 const isDeadlineInvalid = computed(() => {
+  if (order.value?.is_locked) return false
+  if (!attemptedSubmit.value) return false
   if (!editDeadline.value) return false
   return new Date(partsToIso(editDeadline.value)).getTime() < Date.now()
 })
@@ -100,9 +103,10 @@ onUnmounted(() => {
 
 async function updateDeadline() {
   if (!editDeadline.value) return
+  attemptedSubmit.value = true
   const isoDeadline = partsToIso(editDeadline.value)
   if (new Date(isoDeadline).getTime() < Date.now()) {
-    toast('截止時間不能早於現在')
+    await alertWarning('截止時間不能早於現在')
     return
   }
   await api.updateOrderDeadline(orderId, isoDeadline, userStore.username)

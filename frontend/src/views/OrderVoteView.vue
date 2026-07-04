@@ -5,6 +5,7 @@ import { api, RESTAURANT_TYPES, type RestaurantSummary } from '../api'
 import { HOURS, MINUTES, defaultDeadline, partsToIso, type DeadlineParts } from '../deadline'
 import { userStore } from '../stores/user'
 import { toast } from '../stores/toast'
+import { alertWarning } from '../stores/confirm'
 import { requireLogin } from '../auth'
 
 const router = useRouter()
@@ -51,14 +52,20 @@ const buttonLabel = computed(() => {
   return '進行餐廳投票'
 })
 const buttonDisabled = computed(() => selected.value.size === 0)
-const isDeadlineInvalid = computed(() => new Date(partsToIso(deadline.value)).getTime() < Date.now())
+
+const attemptedSubmit = ref(false)
+const isDeadlineInvalid = computed(() => {
+  if (!attemptedSubmit.value) return false
+  return new Date(partsToIso(deadline.value)).getTime() < Date.now()
+})
 
 async function handleAction() {
   if (!requireLogin()) return
+  attemptedSubmit.value = true
   const ids = Array.from(selected.value)
   const isoDeadline = partsToIso(deadline.value)
   if (new Date(isoDeadline).getTime() < Date.now()) {
-    toast('截止時間不能早於現在')
+    await alertWarning('截止時間不能早於現在')
     return
   }
   if (ids.length === 1) {
