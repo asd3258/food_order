@@ -216,4 +216,4 @@ html.large-mode .disabled-feature{font-size:14px;}
 
 .text-danger { color: #e74c3c; }
 .time-select-invalid { border: 1px solid var(--danger) !important; background-color: #fdf2f1 !important; }
-.card-mine { border-left: 4px solid var(--brand); background-color: rgba(43, 108, 176, 0.03); }
+.card-mine { border-left: 4px solid var(--brand); }

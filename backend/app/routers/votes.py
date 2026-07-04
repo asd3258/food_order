@@ -78,8 +78,8 @@ def get_vote(batch_id: int, user: str | None = None, db: Session = Depends(get_d
 def save_my_choice(batch_id: int, payload: schemas.VoteChoiceIn, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Corresponds to pressing Save: locks in the user's choice for this batch."""
     batch = db.query(models.VoteBatch).filter(models.VoteBatch.id == batch_id).first()
-    if not batch or batch.status != "open":
-        raise HTTPException(404, "Open vote batch not found")
+    if not batch:
+        raise HTTPException(404, "Vote batch not found")
     if not check_permission(db, payload.user, "投票", "update", batch.initiator):
         raise HTTPException(403, "沒有權限投票")
     vote = db.query(models.Vote).filter(models.Vote.vote_batch_id == batch_id,
@@ -102,8 +102,8 @@ def clear_my_choice(batch_id: int, user: str, bg_tasks: BackgroundTasks, db: Ses
     right away, rather than keeping the old pick counted until Save is
     pressed again. The user has to pick and Save again to be counted."""
     batch = db.query(models.VoteBatch).filter(models.VoteBatch.id == batch_id).first()
-    if not batch or batch.status != "open":
-        raise HTTPException(404, "Open vote batch not found")
+    if not batch:
+        raise HTTPException(404, "Vote batch not found")
     if not check_permission(db, user, "投票", "update", batch.initiator):
         raise HTTPException(403, "沒有權限移除投票")
     vote = db.query(models.Vote).filter(models.Vote.vote_batch_id == batch_id,

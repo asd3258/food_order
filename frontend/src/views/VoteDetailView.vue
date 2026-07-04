@@ -24,7 +24,6 @@ const isInitiator = computed(() => {
 
 const attemptedSubmit = ref(false)
 const isDeadlineInvalid = computed(() => {
-  if (batch.value?.status !== 'open') return false
   if (!attemptedSubmit.value) return false
   if (!editDeadline.value) return false
   return new Date(partsToIso(editDeadline.value)).getTime() < Date.now()
@@ -150,7 +149,7 @@ function doShare() {
       <select v-model.number="editDeadline.minute" class="time-select" :class="{ 'time-select-invalid': isDeadlineInvalid }">
         <option v-for="m in MINUTES" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
       </select>
-      <button class="btn btn-secondary" style="flex:none;padding:7px 12px;" :disabled="batch.status !== 'open'" @click="updateDeadline">更新</button>
+      <button class="btn btn-secondary" style="flex:none;padding:7px 12px;" @click="updateDeadline">更新</button>
     </div>
 
     <div v-if="isInitiator" class="btn-row">
