@@ -225,9 +225,9 @@ export const api = {
   listRestaurants: (q?: string, type?: string, sort?: string, user?: string) => request<RestaurantSummary[]>(
     `/api/restaurants${qs({ q, type, sort, user })}`),
   listRestaurantTypes: () => request<RestaurantType[]>('/api/parameters/restaurant-types'),
-  createRestaurantType: (data: { name: string }) => request<RestaurantType>('/api/parameters/restaurant-types', 'POST', data),
-  updateRestaurantType: (id: number, data: { name: string }) => request<RestaurantType>(`/api/parameters/restaurant-types/${id}`, 'PUT', data),
-  deleteRestaurantType: (id: number) => request<void>(`/api/parameters/restaurant-types/${id}`, 'DELETE'),
+  createRestaurantType: (data: { name: string }) => request<RestaurantType>('/api/parameters/restaurant-types', { method: 'POST', body: JSON.stringify(data) }),
+  updateRestaurantType: (id: number, data: { name: string }) => request<RestaurantType>(`/api/parameters/restaurant-types/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteRestaurantType: (id: number) => request<void>(`/api/parameters/restaurant-types/${id}`, { method: 'DELETE' }),
   addFavorite: (id: number, user: string) => request<{ is_favorite: boolean }>(
     `/api/restaurants/${id}/favorite${qs({ user })}`, { method: 'POST' }),
   removeFavorite: (id: number, user: string) => request<{ is_favorite: boolean }>(
