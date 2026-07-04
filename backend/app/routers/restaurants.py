@@ -220,6 +220,8 @@ def delete_restaurant(restaurant_id: int, acting_user: str, db: Session = Depend
         db.delete(stale_order)
     db.query(models.VoteBatchCandidate).filter(
         models.VoteBatchCandidate.restaurant_id == restaurant_id).delete()
+    db.query(models.Vote).filter(
+        models.Vote.restaurant_id == restaurant_id).delete()
 
     db.delete(r)  # cascades to RestaurantPhoto + MenuItem (+ MenuItemOption)
     db.commit()
