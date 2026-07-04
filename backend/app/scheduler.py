@@ -1,4 +1,5 @@
 import datetime as dt
+from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
@@ -12,8 +13,8 @@ from app.routers.ws import manager
 jobstores = {
     'default': SQLAlchemyJobStore(engine=engine)
 }
-# PostgreSQL uses UTC internally, we standardise all times to UTC
-scheduler = AsyncIOScheduler(jobstores=jobstores, timezone="UTC")
+# 前端傳送的是本地時間 (沒有時區)，我們這裡統一使用台北時區來解讀
+scheduler = AsyncIOScheduler(jobstores=jobstores, timezone=ZoneInfo("Asia/Taipei"))
 
 
 async def auto_lock_order_job(order_id: int):
@@ -78,8 +79,8 @@ def schedule_order_deadline(order: models.Order):
     """Add or update an APScheduler job for the order deadline."""
     job_id = f"order_{order.id}"
     
-    # ensure it runs in UTC, models.Order.deadline_at is naive UTC from FastApi parsing ISO string
-    run_date = order.deadline_at.replace(tzinfo=dt.timezone.utc)
+    # ensure it runs in Taipei time, models.Order.deadline_at is naive local time
+    run_date = order.deadline_at.replace(tzinfo=ZoneInfo("Asia/Taipei"))
     
     # If the deadline is in the past, apscheduler might run it immediately or discard it.
     scheduler.add_job(
@@ -106,7 +107,7 @@ def schedule_vote_deadline(batch: models.VoteBatch):
     """Add or update an APScheduler job for the vote batch deadline."""
     job_id = f"vote_{batch.id}"
     
-    run_date = batch.deadline_at.replace(tzinfo=dt.timezone.utc)
+    run_date = batch.deadline_at.replace(tzinfo=ZoneInfo("Asia/Taipei"))
     scheduler.add_job(
         auto_decide_vote_job,
         trigger='date',
