@@ -1,6 +1,7 @@
 from typing import Optional
+import datetime as dt
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 from app.permissions import check_permission
@@ -10,6 +11,7 @@ from app.database import get_db
 from app.ai_menu import parse_menu_photo, classify_menu_categories, MenuParseError
 from app.places import fetch_place_info, PlacesError
 from app.storage import upload_data_url, delete_object, StorageError
+from app.limiter import limiter
 
 router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
 
@@ -225,7 +227,8 @@ def delete_restaurant(restaurant_id: int, acting_user: str, db: Session = Depend
 
 
 @router.post("/parse-menu", response_model=list[schemas.MenuItemIn])
-def parse_menu(payload: schemas.MenuParseIn, db: Session = Depends(get_db)):
+@limiter.limit("2/minute")
+def parse_menu(payload: schemas.MenuParseIn, request: Request, db: Session = Depends(get_db)):
     """v0.9: AI-assisted 品項 extraction from a photo of a menu -- see
     app/ai_menu.py for the Gemini-first/OpenAI-fallback logic. Returns
     unsaved draft items (no restaurant_id involved yet) for the frontend to
@@ -246,12 +249,43 @@ def parse_menu(payload: schemas.MenuParseIn, db: Session = Depends(get_db)):
 
 
 @router.post("/fetch-place-info", response_model=schemas.PlaceInfoOut)
-def fetch_place_info_endpoint(payload: schemas.PlaceInfoIn):
+@limiter.limit("2/minute")
+def fetch_place_info_endpoint(payload: schemas.PlaceInfoIn, request: Request, db: Session = Depends(get_db)):
     """v0.10: reads phone/address/營業時間 off a Google Maps listing via the
     Places API (New) -- see app/places.py. Does NOT touch menu photos (see
-    that module's docstring for why)."""
+    that module's docstring for why).
+    v0.13: Added caching and rate limiting."""
+    today = dt.date.today().isoformat()
+    map_url = (payload.map_url or "").strip()
+    
+    if map_url:
+        cached = db.query(models.PlaceCache).filter(models.PlaceCache.map_url == map_url).first()
+        if cached and cached.updated_date == today:
+            return schemas.PlaceInfoOut(
+                name=cached.name,
+                phone=cached.phone,
+                address=cached.address,
+                hours=cached.hours,
+                is_cached=True
+            )
+
     try:
-        return fetch_place_info(payload.map_url)
+        data = fetch_place_info(map_url)
+        
+        if map_url:
+            cached = db.query(models.PlaceCache).filter(models.PlaceCache.map_url == map_url).first()
+            if not cached:
+                cached = models.PlaceCache(map_url=map_url)
+                db.add(cached)
+            cached.name = data.get("name", "")
+            cached.phone = data.get("phone", "")
+            cached.address = data.get("address", "")
+            cached.hours = data.get("hours", "")
+            cached.updated_date = today
+            db.commit()
+            
+        data["is_cached"] = False
+        return data
     except PlacesError as exc:
         raise HTTPException(400, str(exc))
 

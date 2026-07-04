@@ -99,6 +99,7 @@ export interface PlaceInfo {
   phone: string
   address: string
   hours: string
+  is_cached?: boolean
 }
 export interface CategorySuggestion {
   name: string

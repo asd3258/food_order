@@ -130,6 +130,7 @@ class PlaceInfoOut(BaseModel):
     phone: str = ""
     address: str = ""
     hours: str = ""
+    is_cached: bool = False
 
 
 # ---------- v0.10: AI 品項分類 ----------

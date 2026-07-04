@@ -115,7 +115,12 @@ async function fetchPlaceInfo() {
     if (info.phone) phone.value = info.phone
     if (info.address) address.value = info.address
     if (info.hours) hours.value = info.hours
-    toast('已從 Google Map 讀取店名/電話/地址/營業時間,請檢查後再儲存')
+    
+    if (info.is_cached) {
+      toast('這筆資料是資料庫帶入的，如果要更新請隔天重新嘗試')
+    } else {
+      toast('已從 Google Map 讀取店名/電話/地址/營業時間,請檢查後再儲存')
+    }
   } catch {
     // api.ts already toasted the backend's error detail
   } finally {

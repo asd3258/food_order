@@ -246,5 +246,15 @@ class PermissionRule(Base):
     role = Column(String, index=True, nullable=False)  # "admin", "owner", "other", or username
     can_create = Column(String, default="-")  # "V", "X", or "-"
     can_read = Column(String, default="-")
-    can_update = Column(String, default="-")
     can_delete = Column(String, default="-")
+
+class PlaceCache(Base):
+    __tablename__ = "place_cache"
+    id = Column(Integer, primary_key=True, index=True)
+    map_url = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String, default="")
+    phone = Column(String, default="")
+    address = Column(String, default="")
+    hours = Column(Text, default="")
+    updated_date = Column(String, nullable=False)  # Store as YYYY-MM-DD
+

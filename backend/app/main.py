@@ -9,6 +9,12 @@ from app.database import Base, engine, wait_for_db
 from app.migrations import run_light_migrations
 from app.routers import users, restaurants, orders, votes, history, ws, permissions, parameters
 from app.scheduler import scheduler
+from app.limiter import limiter
+
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from fastapi.responses import JSONResponse
+from fastapi import Request
 
 wait_for_db()
 Base.metadata.create_all(bind=engine)
@@ -21,6 +27,14 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 app = FastAPI(title="訂餐統計 App API", version="0.5.0", lifespan=lifespan)
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "請求過於頻繁，請稍後再試 (Too Many Requests)"},
+    )
 
 origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
@@ -30,6 +44,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SlowAPIMiddleware)
 
 app.include_router(users.router)
 app.include_router(restaurants.router)
