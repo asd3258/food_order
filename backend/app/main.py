@@ -3,15 +3,24 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from contextlib import asynccontextmanager
+
 from app.database import Base, engine, wait_for_db
 from app.migrations import run_light_migrations
 from app.routers import users, restaurants, orders, votes, history, ws, permissions
+from app.scheduler import scheduler
 
 wait_for_db()
 Base.metadata.create_all(bind=engine)
 run_light_migrations()
 
-app = FastAPI(title="訂餐統計 App API", version="0.5.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler.start()
+    yield
+    scheduler.shutdown()
+
+app = FastAPI(title="訂餐統計 App API", version="0.5.0", lifespan=lifespan)
 
 origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(

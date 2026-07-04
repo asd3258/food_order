@@ -7,6 +7,7 @@ from app import models, schemas
 from app.database import get_db
 from app.permissions import check_permission
 from app.ws_manager import manager
+from app.scheduler import schedule_order_deadline, cancel_order_deadline
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
@@ -52,6 +53,9 @@ def create_order(payload: schemas.OrderCreateIn, bg_tasks: BackgroundTasks, db: 
     db.add(order)
     db.commit()
     db.refresh(order)
+    
+    schedule_order_deadline(order)
+    
     bg_tasks.add_task(manager.broadcast_home_update)
     return order
 
@@ -173,6 +177,9 @@ def update_deadline(order_id: int, payload: schemas.DeadlineIn, acting_user: str
     order.deadline_at = payload.deadline_at
     db.commit()
     db.refresh(order)
+    
+    schedule_order_deadline(order)
+    
     bg_tasks.add_task(manager.broadcast_order_update, order_id)
     bg_tasks.add_task(manager.broadcast_home_update)
     return order
@@ -213,6 +220,9 @@ def close_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: 
     order.closed_at = dt.datetime.utcnow()
     db.commit()
     db.refresh(history)
+    
+    cancel_order_deadline(order.id)
+    
     bg_tasks.add_task(manager.broadcast_order_update, order_id)
     bg_tasks.add_task(manager.broadcast_home_update)
     return history
@@ -257,6 +267,9 @@ def delete_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db:
         raise HTTPException(403, "只有發起者可以刪除訂單")
     order.status = "deleted"
     db.commit()
+    
+    cancel_order_deadline(order.id)
+    
     bg_tasks.add_task(manager.broadcast_order_update, order_id)
     bg_tasks.add_task(manager.broadcast_home_update)
     return None

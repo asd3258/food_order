@@ -7,6 +7,7 @@ from app import models, schemas
 from app.database import get_db
 from app.permissions import check_permission
 from app.ws_manager import manager
+from app.scheduler import schedule_vote_deadline, cancel_vote_deadline
 
 router = APIRouter(prefix="/api/votes", tags=["votes"])
 
@@ -56,6 +57,9 @@ def create_vote(payload: schemas.VoteBatchCreateIn, bg_tasks: BackgroundTasks, d
         db.add(models.VoteBatchCandidate(vote_batch_id=batch.id, restaurant_id=rid))
     db.commit()
     db.refresh(batch)
+    
+    schedule_vote_deadline(batch)
+    
     bg_tasks.add_task(manager.broadcast_home_update)
     return _serialize_batch(batch, db)
 
@@ -122,6 +126,9 @@ def update_deadline(batch_id: int, payload: schemas.DeadlineIn, acting_user: str
     batch.deadline_at = payload.deadline_at
     db.commit()
     db.refresh(batch)
+    
+    schedule_vote_deadline(batch)
+    
     bg_tasks.add_task(manager.broadcast_vote_update, batch_id)
     bg_tasks.add_task(manager.broadcast_home_update)
     return _serialize_batch(batch, db)
@@ -153,6 +160,9 @@ def decide_vote(batch_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: 
     batch.status = "decided"
     db.commit()
     db.refresh(order)
+    
+    cancel_vote_deadline(batch.id)
+    
     bg_tasks.add_task(manager.broadcast_vote_update, batch_id)
     bg_tasks.add_task(manager.broadcast_home_update)
     return order
@@ -167,6 +177,9 @@ def delete_vote(batch_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: 
         raise HTTPException(403, "只有發起者可以刪除投票")
     batch.status = "deleted"
     db.commit()
+    
+    cancel_vote_deadline(batch.id)
+    
     bg_tasks.add_task(manager.broadcast_vote_update, batch_id)
     bg_tasks.add_task(manager.broadcast_home_update)
     return None
