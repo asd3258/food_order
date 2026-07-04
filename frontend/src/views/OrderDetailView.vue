@@ -34,7 +34,11 @@ const groupedMenu = computed(() => {
     groups[cat].push(m)
   }
   const sorted = catOrder.filter((c) => c !== '未分類').concat(catOrder.includes('未分類') ? ['未分類'] : [])
-  return sorted.map((category) => ({ category, items: groups[category] }))
+  return sorted.map((category) => {
+    // 每個類別內用金額(小到大排序)
+    const sortedItems = groups[category].slice().sort((a, b) => a.price - b.price)
+    return { category, items: sortedItems }
+  })
 })
 
 // v0.12: 改用 userStore.can 統一判斷權限
