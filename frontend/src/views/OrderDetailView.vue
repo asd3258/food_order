@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type OrderOut, type RestaurantDetail, type MenuItem, type StatRow } from '../api'
-import { HOURS, MINUTES, formatDeadline, isoToParts, partsToIso, type DeadlineParts } from '../deadline'
+import { HOURS, MINUTES, formatDeadline, isoToParts, partsToIso, type DeadlineParts, defaultDeadline } from '../deadline'
 import { userStore } from '../stores/user'
 import { confirmAction } from '../stores/confirm'
 import { toast } from '../stores/toast'
@@ -57,7 +57,11 @@ async function load() {
     order.value = await api.getOrder(orderId, userStore.username)
     restaurant.value = await api.getRestaurantMenu(order.value.restaurant_id)
     stats.value = await api.getOrderStats(orderId, userStore.username)
-    editDeadline.value = isoToParts(order.value.deadline_at)
+    if (order.value.deadline_at) {
+      editDeadline.value = isoToParts(order.value.deadline_at)
+    } else {
+      editDeadline.value = defaultDeadline()
+    }
   } catch (e: any) {
     router.push('/')
   }
@@ -235,7 +239,7 @@ function doShare() {
     </div>
 
     <div v-if="!isInitiator" class="deadline-inline">
-      <span>截止時間</span><strong>{{ formatDeadline(order.deadline_at) }}</strong>
+      <span>截止時間</span><strong>{{ order.deadline_at ? formatDeadline(order.deadline_at) : '(未設定)' }}</strong>
     </div>
     <div v-else-if="editDeadline" class="deadline-inline">
       <span>截止時間</span>

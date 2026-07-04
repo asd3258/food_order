@@ -53,22 +53,15 @@ async def auto_decide_vote_job(batch_id: int):
                     best_count, winner_id = count, c.restaurant_id
 
             order = models.Order(restaurant_id=winner_id, initiator=batch.initiator,
-                                  deadline_at=batch.deadline_at, source_vote_batch_id=batch.id)
+                                  deadline_at=None, source_vote_batch_id=batch.id)
             db.add(order)
             batch.status = "decided"
             db.commit()
             db.refresh(order)
-            print(f"[scheduler] Auto-decided vote batch {batch_id}, generated order {order.id}")
+            print(f"[scheduler] Auto-decided vote batch {batch_id}, generated order {order.id} with empty deadline")
             
             await manager.broadcast_vote_update(batch_id)
             await manager.broadcast_home_update()
-            
-            # Note: The new order has a deadline_at copied from the vote batch, which means
-            # it is ALREADY at its deadline. So we should probably immediately lock it!
-            # Since the deadline has passed, schedule_order_deadline will fire immediately or in the past.
-            # We can simply set it as locked directly when creating it.
-            order.is_locked = True
-            db.commit()
     except Exception as e:
         print(f"[scheduler] Failed to auto-decide vote batch {batch_id}: {e}")
     finally:
@@ -79,10 +72,20 @@ def schedule_order_deadline(order: models.Order):
     """Add or update an APScheduler job for the order deadline."""
     job_id = f"order_{order.id}"
     
+    if order.deadline_at is None:
+        print(f"[scheduler] Order {order.id} has no deadline_at, skip scheduling")
+        cancel_order_deadline(order.id)
+        return
+
     # ensure it runs in Taipei time, models.Order.deadline_at is naive local time
     run_date = order.deadline_at.replace(tzinfo=ZoneInfo("Asia/Taipei"))
     
-    # If the deadline is in the past, apscheduler might run it immediately or discard it.
+    # Check if the deadline is in the past
+    now_taipei = dt.datetime.now(ZoneInfo("Asia/Taipei")).replace(tzinfo=None)
+    if order.deadline_at <= now_taipei:
+        print(f"[scheduler] Order {order.id} deadline {order.deadline_at} is in the past, skip scheduling")
+        cancel_order_deadline(order.id)
+        return
     scheduler.add_job(
         auto_lock_order_job,
         trigger='date',

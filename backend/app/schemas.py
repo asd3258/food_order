@@ -144,14 +144,14 @@ class CategorySuggestionOut(BaseModel):
 
 # ---------- Deadline helper ----------
 class DeadlineIn(BaseModel):
-    deadline_at: dt.datetime
+    deadline_at: Optional[dt.datetime] = None
 
 
 # ---------- Orders ----------
 class OrderCreateIn(BaseModel):
     restaurant_id: int
     initiator: str
-    deadline_at: dt.datetime
+    deadline_at: Optional[dt.datetime] = None
     source_vote_batch_id: Optional[int] = None
 
 
@@ -182,7 +182,7 @@ class OrderOut(BaseModel):
     id: int
     restaurant_id: int
     initiator: str
-    deadline_at: dt.datetime
+    deadline_at: Optional[dt.datetime] = None
     status: str
     is_locked: bool = False
     items: List[OrderItemOut] = []

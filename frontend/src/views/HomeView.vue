@@ -67,7 +67,7 @@ function openVote(id: number) {
     <div v-else v-for="o in orders" :key="o.id" class="card card-clickable" @click="openOrder(o)">
       <div>
         <div class="name">訂單{{ o.id }} <span v-if="o.is_locked">🔒</span> · {{ restaurantNames[o.restaurant_id] || '未知餐廳' }}</div>
-        <div class="sub">發起者:{{ o.initiator }} 截止時間:{{ formatDeadline(o.deadline_at) }}</div>
+        <div class="sub">發起者:{{ o.initiator }} 截止時間:{{ o.deadline_at ? formatDeadline(o.deadline_at) : '(未設定)' }}</div>
       </div>
       <div class="chevron">›</div>
     </div>

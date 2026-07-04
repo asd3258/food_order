@@ -158,7 +158,7 @@ class Order(Base):
     restaurant_id = Column(Integer, ForeignKey("restaurants.id"), nullable=False)
     initiator = Column(String, nullable=False)
     source_vote_batch_id = Column(Integer, nullable=True)
-    deadline_at = Column(DateTime, nullable=False)
+    deadline_at = Column(DateTime, nullable=True)
     status = Column(String, default="open")  # open | closed | deleted
     is_locked = Column(Boolean, default=False)
     created_at = Column(DateTime, default=utcnow)

@@ -162,6 +162,14 @@ def run_light_migrations() -> None:
     # v0.13: 新增訂單鎖定功能。
     _add_column_if_missing("orders", "is_locked", "BOOLEAN", default_sql="FALSE")
 
+    # v0.14: 訂單 deadline_at 允許為空
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE orders ALTER COLUMN deadline_at DROP NOT NULL"))
+        print("[migrations] orders.deadline_at is now nullable")
+    except Exception as e:
+        print(f"[migrations] failed to make orders.deadline_at nullable: {e}")
+
     # v0.11: make sure the MinIO bucket exists/is public-read before the
     # photo backfill below tries to use it.
     wait_for_minio()

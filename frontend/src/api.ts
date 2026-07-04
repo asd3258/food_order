@@ -118,7 +118,7 @@ export interface OrderOut {
   id: number
   restaurant_id: number
   initiator: string
-  deadline_at: string
+  deadline_at: string | null
   status: string
   is_locked: boolean
   items: OrderItemRow[]
@@ -253,7 +253,7 @@ export const api = {
 
   // Orders
   listOrders: (status = 'open') => request<OrderOut[]>(`/api/orders${qs({ status })}`),
-  createOrder: (payload: { restaurant_id: number; initiator: string; deadline_at: string; source_vote_batch_id?: number }) =>
+  createOrder: (payload: { restaurant_id: number; initiator: string; deadline_at?: string | null; source_vote_batch_id?: number }) =>
     request<OrderOut>('/api/orders', { method: 'POST', body: JSON.stringify(payload) }),
   getOrder: (id: number, user?: string) => request<OrderOut>(`/api/orders/${id}${qs({ user })}`),
   getOrderStats: (id: number, user?: string) => request<StatRow[]>(`/api/orders/${id}/stats${qs({ user })}`),
@@ -263,7 +263,7 @@ export const api = {
     `/api/orders/${orderId}/items/${itemId}${qs({ user })}`, { method: 'DELETE' }),
   softDeleteItem: (orderId: number, itemId: number, actingUser: string) => request<OrderItemRow>(
     `/api/orders/${orderId}/items/${itemId}/soft-delete${qs({ acting_user: actingUser })}`, { method: 'PATCH' }),
-  updateOrderDeadline: (orderId: number, deadlineAt: string, actingUser: string) => request<OrderOut>(
+  updateOrderDeadline: (orderId: number, deadlineAt: string | null, actingUser: string) => request<OrderOut>(
     `/api/orders/${orderId}/deadline${qs({ acting_user: actingUser })}`,
     { method: 'PATCH', body: JSON.stringify({ deadline_at: deadlineAt }) }),
   closeOrder: (orderId: number, actingUser: string) => request<HistoryEntry>(
