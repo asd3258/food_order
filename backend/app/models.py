@@ -246,6 +246,7 @@ class PermissionRule(Base):
     role = Column(String, index=True, nullable=False)  # "admin", "owner", "other", or username
     can_create = Column(String, default="-")  # "V", "X", or "-"
     can_read = Column(String, default="-")
+    can_update = Column(String, default="-")
     can_delete = Column(String, default="-")
 
 class PlaceCache(Base):
