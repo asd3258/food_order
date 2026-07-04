@@ -64,7 +64,7 @@ class Restaurant(Base):
     photos = relationship("RestaurantPhoto", back_populates="restaurant",
                            cascade="all, delete-orphan", order_by="RestaurantPhoto.sort_order")
     menu_items = relationship("MenuItem", back_populates="restaurant",
-                               cascade="all, delete-orphan")
+                               cascade="all, delete-orphan", order_by="MenuItem.id")
 
 
 class RestaurantFavorite(Base):
@@ -101,7 +101,7 @@ class MenuItem(Base):
 
     restaurant = relationship("Restaurant", back_populates="menu_items")
     options = relationship("MenuItemOption", back_populates="menu_item",
-                            cascade="all, delete-orphan")
+                            cascade="all, delete-orphan", order_by="MenuItemOption.id")
 
 
 class MenuItemOption(Base):
