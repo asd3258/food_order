@@ -61,7 +61,7 @@ function groupBy(options: OptionChoice[], withPrice = false): Record<string, str
   const out: Record<string, string[]> = {}
   for (const o of options) {
     out[o.option_group] = out[o.option_group] || []
-    out[o.option_group].push(withPrice && o.extra_price ? `${o.option_name}${o.extra_price}` : o.option_name)
+    out[o.option_group].push(withPrice && o.extra_price ? `${o.option_name}(${o.extra_price > 0 ? '+' : ''}$${o.extra_price})` : o.option_name)
   }
   return out
 }

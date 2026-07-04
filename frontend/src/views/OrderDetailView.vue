@@ -346,7 +346,7 @@ function doShare() {
               :checked="sheetChoices[g.group]?.includes(c.option_name)"
               @change="onCheckboxToggle(g.group, c.option_name, ($event.target as HTMLInputElement).checked)"
             />
-            {{ c.option_name }}<template v-if="c.extra_price"> (+${{ c.extra_price }})</template>
+            {{ c.option_name }}<template v-if="c.extra_price"> ({{ c.extra_price > 0 ? '+$' + c.extra_price : '-$' + (-c.extra_price) }})</template>
           </label>
         </div>
 

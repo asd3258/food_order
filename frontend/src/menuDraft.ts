@@ -19,7 +19,7 @@ export function optionsToGroups(options: OptionChoice[]): OptionGroupDraft[] {
       byGroup[o.option_group] = { type: o.option_type, choices: [] }
       order.push(o.option_group)
     }
-    byGroup[o.option_group].choices.push(o.extra_price ? `${o.option_name}+${o.extra_price}` : o.option_name)
+    byGroup[o.option_group].choices.push(o.extra_price ? `${o.option_name}${o.extra_price > 0 ? '+' : ''}${o.extra_price}` : o.option_name)
   }
   return order.map((group) => ({ group, type: byGroup[group].type, choicesText: byGroup[group].choices.join(',') }))
 }

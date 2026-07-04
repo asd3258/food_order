@@ -128,7 +128,7 @@ function parseChoices(text: string): { option_name: string; extra_price: number 
     .map((s) => s.trim())
     .filter(Boolean)
     .map((entry) => {
-      const m = entry.match(/^(.+?)\+(\d+)$/)
+      const m = entry.match(/^(.+?)([+-]\d+)$/)
       if (m) return { option_name: m[1].trim(), extra_price: parseInt(m[2], 10) }
       return { option_name: entry, extra_price: 0 }
     })
