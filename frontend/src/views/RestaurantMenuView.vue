@@ -29,7 +29,12 @@ const groupedMenu = computed(() => {
   }
   // keep 未分類 last regardless of insertion order above
   const sorted = order.filter((c) => c !== '未分類').concat(order.includes('未分類') ? ['未分類'] : [])
-  return sorted.map((category) => ({ category, items: groups[category] }))
+  return sorted.map((category) => {
+    return {
+      category,
+      items: groups[category].sort((a, b) => a.price - b.price)
+    }
+  })
 })
 
 const lightboxOpen = ref(false)
