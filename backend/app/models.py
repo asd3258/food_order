@@ -111,7 +111,7 @@ class MenuItemOption(Base):
     option_group = Column(String, nullable=False)   # e.g. "口味"
     option_type = Column(String, nullable=False)    # "radio" | "checkbox"
     option_name = Column(String, nullable=False)     # e.g. "原味"
-    extra_price = Column(Integer, default=0)
+    extra_price = Column(Float, default=0.0)
 
     menu_item = relationship("MenuItem", back_populates="options")
 

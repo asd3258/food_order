@@ -71,16 +71,16 @@ function parseChoices(text: string, basePrice: number): { option_name: string; e
     .map((s) => s.trim())
     .filter(Boolean)
     .map((entry) => {
-      const m = entry.match(/^(.+?)([-+/*])(\d+)$/)
+      const m = entry.match(/^(.+?)([-+/*])([\d.]+)$/)
       if (m) {
         const name = m[1].trim()
         const op = m[2]
-        const val = parseInt(m[3], 10)
+        const val = parseFloat(m[3])
         let extra = 0
         if (op === '+') extra = val
         else if (op === '-') extra = -val
-        else if (op === '*') extra = (basePrice * val) - basePrice
-        else if (op === '/') extra = Math.round(basePrice / val) - basePrice
+        else if (op === '*') extra = parseFloat(((basePrice * val) - basePrice).toFixed(1))
+        else if (op === '/') extra = parseFloat(((basePrice / val) - basePrice).toFixed(1))
         return { option_name: name, extra_price: extra }
       }
       return { option_name: entry, extra_price: 0 }

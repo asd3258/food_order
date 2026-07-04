@@ -16,23 +16,41 @@ def _order_query(db: Session):
     return db.query(models.Order).options(joinedload(models.Order.items))
 
 
+import math
+
 def _line_label(item: models.OrderItem, db: Session) -> str:
     mi = db.query(models.MenuItem).filter(models.MenuItem.id == item.menu_item_id).first()
     name = mi.name if mi else "(已刪除品項)"
     opts = item.selected_options or []
-    return f"{name}({'/'.join(opts)})" if opts else name
+    
+    formatted_opts = []
+    if mi:
+        for opt_name in opts:
+            match = next((o for o in mi.options if o.option_name == opt_name), None)
+            if match and match.extra_price:
+                ep = match.extra_price
+                sign = "+" if ep > 0 else "-"
+                val = abs(ep)
+                val_str = f"{val:g}"
+                formatted_opts.append(f"{opt_name}({sign}${val_str})")
+            else:
+                formatted_opts.append(opt_name)
+    else:
+        formatted_opts = opts
+        
+    return f"{name}({'/'.join(formatted_opts)})" if formatted_opts else name
 
 
 def _item_amount(item: models.OrderItem, db: Session) -> int:
     mi = db.query(models.MenuItem).filter(models.MenuItem.id == item.menu_item_id).first()
     base = mi.price if mi else 0
-    extra = 0
+    extra = 0.0
     if mi:
         for opt_name in (item.selected_options or []):
             match = next((o for o in mi.options if o.option_name == opt_name), None)
             if match:
-                extra += match.extra_price
-    return (base + extra) * item.quantity
+                extra += float(match.extra_price)
+    return math.ceil((base + extra) * item.quantity)
 
 
 @router.get("", response_model=list[schemas.OrderOut])

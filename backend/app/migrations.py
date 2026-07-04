@@ -58,6 +58,18 @@ def _drop_column_if_exists(table: str, column: str) -> None:
         pass  # already gone
 
 
+def _alter_column_type(table: str, column: str, coltype: str) -> None:
+    """Alters a column's type. Safe to call if already altered."""
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {coltype}"))
+    except Exception:
+        pass
+
+
+def _migrate_extra_price_to_float() -> None:
+    _alter_column_type("menu_item_options", "extra_price", "FLOAT")
+    print("[migrations] altered menu_item_options.extra_price to FLOAT")
 def _migrate_photos_to_object_storage(db) -> None:
     """v0.11: move any already-stored `data:` base64 photos into MinIO,
     replacing the row's image_url with the new /media/... path -- see
@@ -169,6 +181,8 @@ def run_light_migrations() -> None:
         print("[migrations] orders.deadline_at is now nullable")
     except Exception as e:
         print(f"[migrations] failed to make orders.deadline_at nullable: {e}")
+
+    _migrate_extra_price_to_float()
 
     # v0.11: make sure the MinIO bucket exists/is public-read before the
     # photo backfill below tries to use it.

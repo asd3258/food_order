@@ -32,7 +32,7 @@ class OptionChoiceIn(BaseModel):
     option_group: str
     option_type: str  # radio | checkbox
     option_name: str
-    extra_price: int = 0
+    extra_price: float = 0.0
 
 
 class OptionChoiceOut(OptionChoiceIn):
