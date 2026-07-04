@@ -51,6 +51,7 @@ const buttonLabel = computed(() => {
   return '進行餐廳投票'
 })
 const buttonDisabled = computed(() => selected.value.size === 0)
+const isDeadlineInvalid = computed(() => new Date(partsToIso(deadline.value)).getTime() < Date.now())
 
 async function handleAction() {
   if (!requireLogin()) return
@@ -101,12 +102,12 @@ async function handleAction() {
     <div class="deadline-row">
       <label>截止時間</label>
       <div class="deadline-inline" style="margin-bottom:0;">
-        <input v-model="deadline.date" type="date" class="time-select" />
-        <select v-model.number="deadline.hour" class="time-select">
+        <input v-model="deadline.date" type="date" class="time-select" :class="{ 'time-select-invalid': isDeadlineInvalid }" />
+        <select v-model.number="deadline.hour" class="time-select" :class="{ 'time-select-invalid': isDeadlineInvalid }">
           <option v-for="h in HOURS" :key="h" :value="h">{{ String(h).padStart(2, '0') }}</option>
         </select>
         <span>:</span>
-        <select v-model.number="deadline.minute" class="time-select">
+        <select v-model.number="deadline.minute" class="time-select" :class="{ 'time-select-invalid': isDeadlineInvalid }">
           <option v-for="m in MINUTES" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
         </select>
       </div>

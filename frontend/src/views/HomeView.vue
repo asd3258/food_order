@@ -64,7 +64,7 @@ function openVote(id: number) {
   <section class="block">
     <h2>當前已發起訂單</h2>
     <div v-if="orders.length === 0" class="empty">目前沒有訂單</div>
-    <div v-else v-for="o in orders" :key="o.id" class="card card-clickable" @click="openOrder(o)">
+    <div v-else v-for="o in orders" :key="o.id" class="card card-clickable" :class="{ 'card-mine': o.initiator === userStore.username }" @click="openOrder(o)">
       <div>
         <div class="name">
           訂單{{ o.id }} <span v-if="o.is_locked">🔒</span> · {{ restaurantNames[o.restaurant_id] || '未知餐廳' }}
@@ -84,7 +84,7 @@ function openVote(id: number) {
   <section class="block">
     <h2>目前投票中</h2>
     <div v-if="votes.length === 0" class="empty">目前沒有投票</div>
-    <div v-else v-for="v in votes" :key="v.id" class="card card-clickable" @click="openVote(v.id)">
+    <div v-else v-for="v in votes" :key="v.id" class="card card-clickable" :class="{ 'card-mine': v.initiator === userStore.username }" @click="openVote(v.id)">
       <div>
         <div class="name">投票{{ v.id }} {{ v.candidates.map((c) => c.restaurant_name).join('/') }}</div>
         <div class="sub">

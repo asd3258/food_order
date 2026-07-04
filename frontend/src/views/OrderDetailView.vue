@@ -51,6 +51,10 @@ const canModify = computed(() => {
 })
 const myLines = computed(() => stats.value.filter((s) => s.user === userStore.username && !s.is_deleted))
 const myTotal = computed(() => myLines.value.reduce((sum, l) => sum + l.amount, 0))
+const isDeadlineInvalid = computed(() => {
+  if (!editDeadline.value) return false
+  return new Date(partsToIso(editDeadline.value)).getTime() < Date.now()
+})
 
 async function load() {
   try {
@@ -248,15 +252,15 @@ function doShare() {
     </div>
     <div v-else-if="editDeadline" class="deadline-inline">
       <span>截止時間</span>
-      <input v-model="editDeadline.date" type="date" class="time-select" />
-      <select v-model.number="editDeadline.hour" class="time-select">
+      <input v-model="editDeadline.date" type="date" class="time-select" :class="{ 'time-select-invalid': isDeadlineInvalid }" />
+      <select v-model.number="editDeadline.hour" class="time-select" :class="{ 'time-select-invalid': isDeadlineInvalid }">
         <option v-for="h in HOURS" :key="h" :value="h">{{ String(h).padStart(2, '0') }}</option>
       </select>
       <span>:</span>
-      <select v-model.number="editDeadline.minute" class="time-select">
+      <select v-model.number="editDeadline.minute" class="time-select" :class="{ 'time-select-invalid': isDeadlineInvalid }">
         <option v-for="m in MINUTES" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
       </select>
-      <button class="btn btn-secondary" style="flex:none;padding:7px 12px;" @click="updateDeadline">更新</button>
+      <button class="btn btn-secondary" style="flex:none;padding:7px 12px;" :disabled="order.is_locked" @click="updateDeadline">更新</button>
     </div>
 
     <div v-if="isInitiator" class="btn-row">
