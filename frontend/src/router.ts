@@ -20,6 +20,7 @@ const router = createRouter({
     { path: '/votes/:id', name: 'voteDetail', component: () => import('./views/VoteDetailView.vue') },
     { path: '/orders/:id', name: 'orderDetail', component: () => import('./views/OrderDetailView.vue') },
     { path: '/more', name: 'more', component: () => import('./views/MoreView.vue') },
+    { path: '/parameters', name: 'parameters', component: () => import('./views/ParametersView.vue') },
     { path: '/create-restaurant', name: 'createRestaurant', component: () => import('./views/CreateRestaurantView.vue') },
     { path: '/history', name: 'history', component: () => import('./views/HistoryView.vue') },
     { path: '/login', name: 'login', component: () => import('./views/LoginView.vue') },

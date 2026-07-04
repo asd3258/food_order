@@ -26,9 +26,8 @@ const mapUrl = ref('')
 const phone = ref('')
 const address = ref('')
 const hours = ref('')
-const type = ref(RESTAURANT_TYPES[0])
-const customType = ref('') // v0.7: 餐廳類型 manual entry, overrides the dropdown when filled
-const types = ref<string[]>(RESTAURANT_TYPES)
+const selectedTypes = ref<string[]>([])
+const types = ref<{ id: number, name: string }[]>([])
 const items = ref<ItemDraft[]>([])
 const parsingMenu = ref(false)
 const fetchingPlace = ref(false)
@@ -37,7 +36,10 @@ const menuFileInput = ref<HTMLInputElement | null>(null)
 async function loadTypes() {
   try {
     types.value = await api.listRestaurantTypes()
-  } catch {
+    if (types.value.length > 0) {
+      selectedTypes.value = [types.value[0].name]
+    }
+  } catch (e) {
     // keep the static fallback if the backend isn't reachable yet
   }
 }
@@ -150,7 +152,11 @@ async function submit() {
     toast('請輸入餐廳名稱')
     return
   }
-  const finalType = customType.value.trim() || type.value
+  const finalType = selectedTypes.value.join(',')
+  if (!finalType) {
+    alert('請至少選擇一個餐廳類型')
+    return
+  }
   await api.createRestaurant({
     name: name.value,
     phone: phone.value,
@@ -214,15 +220,14 @@ async function submit() {
         <label>營業時間</label>
         <textarea v-model="hours" rows="4" placeholder="例:&#10;星期一至五 11:00–14:00, 17:00–20:30&#10;星期六日 公休"></textarea>
       </div>
-      <div class="form-group">
+      <div class="form-group checkbox-group">
         <label>餐廳類型</label>
-        <select v-model="type">
-          <option v-for="t in types" :key="t" :value="t">{{ t }}</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>或手動輸入新類型(填了會取代上面的選擇)</label>
-        <input v-model="customType" placeholder="例:火鍋" />
+        <div class="checkboxes">
+          <label v-for="t in types" :key="t.id">
+            <input type="checkbox" :value="t.name" v-model="selectedTypes" />
+            {{ t.name }}
+          </label>
+        </div>
       </div>
     </div>
   </section>

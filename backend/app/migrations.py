@@ -161,6 +161,29 @@ def _seed_default_permissions(db) -> None:
     print("[migrations] seeded default permission rules")
 
 
+def _seed_restaurant_types(db) -> None:
+    """v0.15: Migrate distinct restaurant types to RestaurantType table."""
+    # First get existing predefined from schemas
+    from app.schemas import RESTAURANT_TYPES
+    all_types = set(RESTAURANT_TYPES)
+    
+    # Also get all existing distinct types that might have been typed in manually, separated by comma or not
+    existing_types = db.query(models.Restaurant.type).distinct().all()
+    for row in existing_types:
+        if row[0]:
+            parts = [p.strip() for p in row[0].split(",") if p.strip()]
+            for p in parts:
+                all_types.add(p)
+    
+    # Now insert missing ones
+    for t in all_types:
+        exists = db.query(models.RestaurantType).filter(models.RestaurantType.name == t).first()
+        if not exists:
+            db.add(models.RestaurantType(name=t))
+    db.commit()
+    print("[migrations] seeded restaurant types")
+
+
 def run_light_migrations() -> None:
     # v0.10: 營業時間 on restaurants, 分類 on menu_items.
     _add_column_if_missing("restaurants", "hours", "TEXT")
@@ -187,11 +210,12 @@ def run_light_migrations() -> None:
     # v0.11: make sure the MinIO bucket exists/is public-read before the
     # photo backfill below tries to use it.
     wait_for_minio()
-
-    db = SessionLocal()
-    try:
-        _rename_admin_mike_to_mike_admin(db)
-        _migrate_photos_to_object_storage(db)
-        _seed_default_permissions(db)
-    finally:
-        db.close()
+    with SessionLocal() as db:
+        try:
+            _rename_admin_mike_to_mike_admin(db)
+            _fix_null_prices(db)
+            _seed_permission_rules(db)
+            _seed_restaurant_types(db)
+            _migrate_photos_to_object_storage(db)
+        finally:
+            db.close()

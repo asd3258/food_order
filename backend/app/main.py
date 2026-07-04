@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from app.database import Base, engine, wait_for_db
 from app.migrations import run_light_migrations
-from app.routers import users, restaurants, orders, votes, history, ws, permissions
+from app.routers import users, restaurants, orders, votes, history, ws, permissions, parameters
 from app.scheduler import scheduler
 
 wait_for_db()
@@ -45,6 +45,7 @@ app.include_router(orders.router)
 app.include_router(votes.router)
 app.include_router(ws.router)
 app.include_router(permissions.router)
+app.include_router(parameters.router)
 
 
 @app.get("/api/health")

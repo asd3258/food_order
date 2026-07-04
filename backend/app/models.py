@@ -67,6 +67,13 @@ class Restaurant(Base):
                                cascade="all, delete-orphan", order_by="MenuItem.id")
 
 
+class RestaurantType(Base):
+    __tablename__ = "restaurant_types"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+
 class RestaurantFavorite(Base):
     """v0.12: per-user「★常用」標記 -- 跟著登入的帳號走(user 是純字串,跟其他
     地方的身分模式一致,不是真正的外鍵到 User.id),不是全域設定。同一人對同一

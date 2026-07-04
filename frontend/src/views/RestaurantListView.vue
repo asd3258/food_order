@@ -1,22 +1,22 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { api, RESTAURANT_TYPES, type RestaurantSummary } from '../api'
+import { api, type RestaurantSummary, type RestaurantType } from '../api'
 import { userStore } from '../stores/user'
 import { requireLogin } from '../auth'
 
 const router = useRouter()
 const restaurants = ref<RestaurantSummary[]>([])
-const types = ref<string[]>(RESTAURANT_TYPES)
+const types = ref<RestaurantType[]>([])
 const q = ref('')
-const activeType = ref<string | null>(null)
+const typeFilter = ref('')
 // v0.12: 新增 "star"(★常用優先,再依名稱)當預設排序,取代原本的 created_desc
 // 預設;原本兩個排序("created_desc"/"name")邏輯不變,只是變成第 2、3 個選項。
 const sort = ref<'star' | 'created_desc' | 'name'>('star')
 
 async function load() {
   restaurants.value = await api.listRestaurants(
-    q.value, activeType.value || undefined, sort.value, userStore.username || undefined)
+    q.value, typeFilter.value || undefined, sort.value, userStore.username || undefined)
 }
 async function loadTypes() {
   try {
@@ -30,10 +30,7 @@ onMounted(load)
 onMounted(loadTypes)
 watch(q, load)
 
-function toggleType(t: string) {
-  activeType.value = activeType.value === t ? null : t
-  load()
-}
+watch(typeFilter, load)
 
 function setSort(s: 'star' | 'created_desc' | 'name') {
   sort.value = s
@@ -64,15 +61,10 @@ async function toggleFavorite(r: RestaurantSummary) {
   <div class="search-row">
     <input v-model="q" type="text" placeholder="搜尋餐廳或品項名稱" />
   </div>
-  <div class="type-filter-row">
-    <span
-      v-for="t in types"
-      :key="t"
-      class="type-chip"
-      :class="{ active: activeType === t }"
-      @click="toggleType(t)"
-    >{{ t }}</span>
-  </div>
+    <div class="type-filter-row">
+      <span class="type-chip" :class="{ active: typeFilter === '' }" @click="typeFilter = ''">全部</span>
+      <span v-for="t in types" :key="t.id" class="type-chip" :class="{ active: typeFilter === t.name }" @click="typeFilter = t.name">{{ t.name }}</span>
+    </div>
   <div class="type-filter-row">
     <span class="type-chip" :class="{ active: sort === 'star' }" @click="setSort('star')">預設排序</span>
     <span class="type-chip" :class="{ active: sort === 'name' }" @click="setSort('name')">名稱排序</span>

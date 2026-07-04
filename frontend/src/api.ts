@@ -173,6 +173,11 @@ export interface HistoryEntry {
   lines: HistoryLine[]
   payments: HistoryPayment[]
 }
+export interface RestaurantType {
+  id: number
+  name: string
+}
+
 export interface PermissionRule {
   id: number
   module: string
@@ -219,7 +224,10 @@ export const api = {
   // "name"(名稱排序);`user` 用來算 is_favorite 跟 star 排序的依據。
   listRestaurants: (q?: string, type?: string, sort?: string, user?: string) => request<RestaurantSummary[]>(
     `/api/restaurants${qs({ q, type, sort, user })}`),
-  listRestaurantTypes: () => request<string[]>('/api/restaurants/types'),
+  listRestaurantTypes: () => request<RestaurantType[]>('/api/parameters/restaurant-types'),
+  createRestaurantType: (data: { name: string }) => request<RestaurantType>('/api/parameters/restaurant-types', 'POST', data),
+  updateRestaurantType: (id: number, data: { name: string }) => request<RestaurantType>(`/api/parameters/restaurant-types/${id}`, 'PUT', data),
+  deleteRestaurantType: (id: number) => request<void>(`/api/parameters/restaurant-types/${id}`, 'DELETE'),
   addFavorite: (id: number, user: string) => request<{ is_favorite: boolean }>(
     `/api/restaurants/${id}/favorite${qs({ user })}`, { method: 'POST' }),
   removeFavorite: (id: number, user: string) => request<{ is_favorite: boolean }>(

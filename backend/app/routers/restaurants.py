@@ -34,7 +34,12 @@ def list_restaurants(q: Optional[str] = None, type: Optional[str] = None, sort: 
     is_favorite 全部是 False,star 排序就退化成純名稱排序。"""
     query = db.query(models.Restaurant)
     if type:
-        query = query.filter(models.Restaurant.type == type)
+        query = query.filter(
+            (models.Restaurant.type == type) |
+            models.Restaurant.type.like(f"{type},%") |
+            models.Restaurant.type.like(f"%,{type}") |
+            models.Restaurant.type.like(f"%,{type},%")
+        )
     restaurants = query.all()
 
     fav_ids: set[int] = set()
@@ -98,15 +103,6 @@ def remove_favorite(restaurant_id: int, user: str, db: Session = Depends(get_db)
         db.commit()
     return schemas.FavoriteOut(is_favorite=False)
 
-
-@router.get("/types", response_model=list[str])
-def list_restaurant_types(db: Session = Depends(get_db)):
-    """v0.7: 餐廳類型 is no longer a fixed whitelist -- this returns the 4
-    baseline types plus any custom type someone has typed in on a restaurant,
-    so the filter chips on 餐廳清單/開單與投票 stay in sync automatically."""
-    used = {row[0] for row in db.query(models.Restaurant.type).distinct().all() if row[0]}
-    extra = sorted(t for t in used if t not in schemas.RESTAURANT_TYPES)
-    return list(schemas.RESTAURANT_TYPES) + extra
 
 
 @router.get("/{restaurant_id}/menu", response_model=schemas.RestaurantDetailOut)

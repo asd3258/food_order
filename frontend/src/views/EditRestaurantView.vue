@@ -32,9 +32,8 @@ const mapUrl = ref('')
 const phone = ref('')
 const address = ref('')
 const hours = ref('')
-const type = ref(RESTAURANT_TYPES[0])
-const customType = ref('') // v0.7: 餐廳類型 manual entry, overrides the dropdown when filled
-const types = ref<string[]>(RESTAURANT_TYPES)
+const selectedTypes = ref<string[]>([])
+const types = ref<{ id: number, name: string }[]>([])
 const photos = ref<{ id?: number; image_url: string; caption: string; isNew?: boolean }[]>([])
 const items = ref<ItemDraft[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -94,7 +93,7 @@ async function load() {
   phone.value = r.phone
   address.value = r.address
   hours.value = r.hours || ''
-  type.value = r.type
+  selectedTypes.value = r.type ? r.type.split(',').map(s => s.trim()) : []
   photos.value = r.photos.map((p) => ({ id: p.id, image_url: p.image_url, caption: p.caption }))
   items.value = r.menu_items.map((m) => ({ id: m.id, name: m.name, price: m.price, category: m.category || '', optionGroups: groupsFromMenuItem(m) }))
 }
@@ -212,7 +211,11 @@ async function classifyCategories() {
 
 async function save() {
   if (!requireLogin()) return
-  const finalType = customType.value.trim() || type.value
+  const finalType = selectedTypes.value.join(',')
+  if (!finalType) {
+    alert('請至少選擇一個餐廳類型')
+    return
+  }
   await api.updateRestaurant(restaurantId, {
     name: name.value,
     phone: phone.value,
@@ -283,15 +286,14 @@ async function removeRestaurant() {
         <label>營業時間</label>
         <textarea v-model="hours" rows="4" placeholder="例:&#10;星期一至五 11:00–14:00, 17:00–20:30&#10;星期六日 公休"></textarea>
       </div>
-      <div class="form-group">
+      <div class="form-group checkbox-group">
         <label>餐廳類型</label>
-        <select v-model="type">
-          <option v-for="t in types" :key="t" :value="t">{{ t }}</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>或手動輸入新類型(填了會取代上面的選擇)</label>
-        <input v-model="customType" placeholder="例:火鍋" />
+        <div class="checkboxes">
+          <label v-for="t in types" :key="t.id">
+            <input type="checkbox" :value="t.name" v-model="selectedTypes" />
+            {{ t.name }}
+          </label>
+        </div>
       </div>
     </div>
   </section>
