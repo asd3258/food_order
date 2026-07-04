@@ -65,14 +65,24 @@ function closeLightbox() {
 function groupsFromMenuItem(m: MenuItem): OptionGroupDraft[] {
   return optionsToGroups(m.options)
 }
-function parseChoices(text: string): { option_name: string; extra_price: number }[] {
+function parseChoices(text: string, basePrice: number): { option_name: string; extra_price: number }[] {
   return text
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
     .map((entry) => {
-      const m = entry.match(/^(.+?)([+-]\d+)$/)
-      if (m) return { option_name: m[1].trim(), extra_price: parseInt(m[2], 10) }
+      const m = entry.match(/^(.+?)([-+/*])(\d+)$/)
+      if (m) {
+        const name = m[1].trim()
+        const op = m[2]
+        const val = parseInt(m[3], 10)
+        let extra = 0
+        if (op === '+') extra = val
+        else if (op === '-') extra = -val
+        else if (op === '*') extra = (basePrice * val) - basePrice
+        else if (op === '/') extra = Math.round(basePrice / val) - basePrice
+        return { option_name: name, extra_price: extra }
+      }
       return { option_name: entry, extra_price: 0 }
     })
 }
@@ -215,7 +225,7 @@ async function save() {
       price: it.price,
       category: it.category || '',
       options: it.optionGroups.flatMap((g) =>
-        parseChoices(g.choicesText).map((c) => ({
+        parseChoices(g.choicesText, it.price || 0).map((c) => ({
           option_group: g.group || '選項',
           option_type: g.type,
           option_name: c.option_name,
