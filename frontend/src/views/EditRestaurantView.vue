@@ -286,12 +286,21 @@ async function removeRestaurant() {
         <label>營業時間</label>
         <textarea v-model="hours" rows="4" placeholder="例:&#10;星期一至五 11:00–14:00, 17:00–20:30&#10;星期六日 公休"></textarea>
       </div>
-      <div class="form-group checkbox-group">
-        <label>餐廳類型</label>
-        <div class="checkboxes">
-          <label v-for="t in types" :key="t.id">
+      <div class="form-group restaurant-type-field">
+        <div class="field-head">
+          <label>餐廳類型</label>
+          <span>{{ selectedTypes.length ? `已選 ${selectedTypes.length} 種` : '至少選 1 種' }}</span>
+        </div>
+        <div class="type-picker">
+          <label
+            v-for="t in types"
+            :key="t.id"
+            class="type-option"
+            :class="{ selected: selectedTypes.includes(t.name) }"
+          >
             <input type="checkbox" :value="t.name" v-model="selectedTypes" />
-            {{ t.name }}
+            <span class="checkmark"></span>
+            <span class="type-option-name">{{ t.name }}</span>
           </label>
         </div>
       </div>
@@ -376,3 +385,91 @@ async function removeRestaurant() {
   <button class="btn btn-primary btn-full" @click="save">儲存變更</button>
   <button class="btn btn-danger btn-full" style="margin-top:10px;" @click="removeRestaurant">🗑️ 刪除餐廳</button>
 </template>
+
+<style scoped>
+.field-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.field-head label {
+  margin: 0;
+}
+.field-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.type-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 8px;
+}
+.type-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+.type-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.checkmark {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #c7c5d8;
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: #fff;
+}
+.checkmark::after {
+  content: "";
+  width: 8px;
+  height: 5px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) translate(1px, -1px);
+  opacity: 0;
+}
+.type-option.selected {
+  border-color: var(--brand);
+  background: #f0efff;
+  color: var(--brand);
+  font-weight: 700;
+}
+.type-option.selected .checkmark {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+.type-option.selected .checkmark::after {
+  opacity: 1;
+}
+.type-option-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+:global(html.large-mode) .field-head span {
+  font-size: 14px;
+}
+:global(html.large-mode) .type-option {
+  min-height: 50px;
+  font-size: 16px;
+}
+:global(html.large-mode) .checkmark {
+  width: 22px;
+  height: 22px;
+}
+</style>
