@@ -102,8 +102,13 @@ function copyMapLink(r: RestaurantDetail) {
     <template v-if="restaurant.menu_items.length">
       <div v-for="grp in groupedMenu" :key="grp.category">
         <div class="menu-cat" style="margin-top:14px;font-size:12px;color:var(--muted);font-weight:600;">{{ grp.category }}</div>
-        <table class="stat-table">
-          <tr><th>品項名稱</th><th>口味</th><th>加購</th><th>金額</th></tr>
+        <table class="stat-table" style="table-layout: fixed;">
+          <tr>
+            <th style="width: 40%;">品項名稱</th>
+            <th style="width: 25%;">口味</th>
+            <th style="width: 20%;">加購</th>
+            <th style="width: 15%;">金額</th>
+          </tr>
           <tr v-for="m in grp.items" :key="m.id">
             <td>{{ m.name }}</td>
             <td>{{ flavorStr(m.options) }}</td>
