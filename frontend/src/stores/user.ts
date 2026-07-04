@@ -1,6 +1,7 @@
 import { reactive } from 'vue'
 import { api, type ModulePermissions } from '../api'
 import { toast } from './toast'
+import { resetFilters } from './filters'
 
 const STORAGE_KEY = 'food_order_user_id'
 // v0.11: 大字模式 -- 這個 key 只是「開機時先套用,避免閃一下正常字級再變大」的
@@ -115,6 +116,7 @@ export const userStore = reactive({
     this.isAdmin = false
     this.permissions = null
     localStorage.removeItem(STORAGE_KEY)
+    resetFilters()
   },
 
   can(module: string, action: 'create' | 'read' | 'update' | 'delete', owner?: string): boolean {
