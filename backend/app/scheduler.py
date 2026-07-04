@@ -42,23 +42,36 @@ async def auto_decide_vote_job(batch_id: int):
             joinedload(models.VoteBatch.candidates)).filter(models.VoteBatch.id == batch_id).first()
         
         if batch and batch.status == "open":
-            winner_id, best_count = None, -1
+            counts = []
             for c in batch.candidates:
                 count = db.query(models.Vote).filter(
                     models.Vote.vote_batch_id == batch.id,
                     models.Vote.restaurant_id == c.restaurant_id,
                     models.Vote.status == "locked",
                 ).count()
-                if count > best_count:
-                    best_count, winner_id = count, c.restaurant_id
-
-            order = models.Order(restaurant_id=winner_id, initiator=batch.initiator,
-                                  deadline_at=None, source_vote_batch_id=batch.id)
-            db.add(order)
-            batch.status = "decided"
-            db.commit()
-            db.refresh(order)
-            print(f"[scheduler] Auto-decided vote batch {batch_id}, generated order {order.id} with empty deadline")
+                counts.append((count, c.restaurant_id))
+            
+            if not counts:
+                batch.status = "failed"
+                db.commit()
+                print(f"[scheduler] Auto-decided vote batch {batch_id}: failed (no candidates)")
+            else:
+                best_count = max([c[0] for c in counts])
+                winners = [c[1] for c in counts if c[0] == best_count]
+                
+                if len(winners) > 1:
+                    batch.status = "failed"
+                    db.commit()
+                    print(f"[scheduler] Auto-decided vote batch {batch_id}: failed (tie, {len(winners)} winners with {best_count} votes)")
+                else:
+                    winner_id = winners[0]
+                    order = models.Order(restaurant_id=winner_id, initiator=batch.initiator,
+                                          deadline_at=None, source_vote_batch_id=batch.id)
+                    db.add(order)
+                    batch.status = "decided"
+                    db.commit()
+                    db.refresh(order)
+                    print(f"[scheduler] Auto-decided vote batch {batch_id}, generated order {order.id} with empty deadline")
             
             await manager.broadcast_vote_update(batch_id)
             await manager.broadcast_home_update()

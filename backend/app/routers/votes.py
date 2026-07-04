@@ -39,8 +39,9 @@ def _serialize_batch(batch: models.VoteBatch, db: Session, user: str | None = No
 
 @router.get("", response_model=list[schemas.VoteBatchOut])
 def list_votes(status: str = "open", db: Session = Depends(get_db)):
+    statuses = status.split(",")
     batches = db.query(models.VoteBatch).options(
-        joinedload(models.VoteBatch.candidates)).filter(models.VoteBatch.status == status).all()
+        joinedload(models.VoteBatch.candidates)).filter(models.VoteBatch.status.in_(statuses)).all()
     return [_serialize_batch(b, db) for b in batches]
 
 
@@ -144,28 +145,46 @@ def decide_vote(batch_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: 
     if not check_permission(db, acting_user, "投票", "delete", batch.initiator):
         raise HTTPException(403, "只有發起者可以開票")
 
-    winner_id, best_count = None, -1
+    counts = []
     for c in batch.candidates:
         count = db.query(models.Vote).filter(
             models.Vote.vote_batch_id == batch.id,
             models.Vote.restaurant_id == c.restaurant_id,
             models.Vote.status == "locked",
         ).count()
-        if count > best_count:
-            best_count, winner_id = count, c.restaurant_id
+        counts.append((count, c.restaurant_id))
 
-    order = models.Order(restaurant_id=winner_id, initiator=acting_user,
-                          deadline_at=batch.deadline_at, source_vote_batch_id=batch.id)
-    db.add(order)
-    batch.status = "decided"
-    db.commit()
-    db.refresh(order)
+    if not counts:
+        batch.status = "failed"
+        db.commit()
+        order = None
+    else:
+        best_count = max([c[0] for c in counts])
+        winners = [c[1] for c in counts if c[0] == best_count]
+        
+        if len(winners) > 1:
+            batch.status = "failed"
+            db.commit()
+            order = None
+        else:
+            winner_id = winners[0]
+            order = models.Order(restaurant_id=winner_id, initiator=acting_user,
+                                  deadline_at=None, source_vote_batch_id=batch.id)
+            db.add(order)
+            batch.status = "decided"
+            db.commit()
+            db.refresh(order)
     
     cancel_vote_deadline(batch.id)
     
     bg_tasks.add_task(manager.broadcast_vote_update, batch_id)
     bg_tasks.add_task(manager.broadcast_home_update)
-    return order
+    if order:
+        return order
+    else:
+        # If failed, return a 400 or just a dict? The response model is schemas.OrderOut.
+        # But if it failed, there is no order. We should probably raise an HTTPException so frontend knows it failed.
+        raise HTTPException(400, "投票平手，無法開票")
 
 
 @router.delete("/{batch_id}", status_code=204)

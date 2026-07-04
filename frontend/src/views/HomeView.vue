@@ -14,7 +14,7 @@ const restaurantNames = ref<Record<number, string>>({})
 async function load() {
   const [o, v, restaurants] = await Promise.all([
     api.listOrders('open'),
-    api.listVotes('open'),
+    api.listVotes('open,failed'),
     api.listRestaurants(),
   ])
   // v0.12: 依訂單/投票編號由小到大排序(訂單1,訂單2,訂單4...),不依賴資料庫
@@ -66,8 +66,16 @@ function openVote(id: number) {
     <div v-if="orders.length === 0" class="empty">目前沒有訂單</div>
     <div v-else v-for="o in orders" :key="o.id" class="card card-clickable" @click="openOrder(o)">
       <div>
-        <div class="name">訂單{{ o.id }} <span v-if="o.is_locked">🔒</span> · {{ restaurantNames[o.restaurant_id] || '未知餐廳' }}</div>
-        <div class="sub">發起者:{{ o.initiator }} 截止時間:{{ o.deadline_at ? formatDeadline(o.deadline_at) : '(未設定)' }}</div>
+        <div class="name">
+          訂單{{ o.id }} <span v-if="o.is_locked">🔒</span> · {{ restaurantNames[o.restaurant_id] || '未知餐廳' }}
+        </div>
+        <div class="sub">
+          發起者:{{ o.initiator }} 截止時間:
+          <span :class="{ 'text-danger': o.is_locked }">
+            {{ o.deadline_at ? formatDeadline(o.deadline_at) : '(未設定)' }}
+            <template v-if="o.is_locked">(已截止)</template>
+          </span>
+        </div>
       </div>
       <div class="chevron">›</div>
     </div>
@@ -79,7 +87,13 @@ function openVote(id: number) {
     <div v-else v-for="v in votes" :key="v.id" class="card card-clickable" @click="openVote(v.id)">
       <div>
         <div class="name">投票{{ v.id }} {{ v.candidates.map((c) => c.restaurant_name).join('/') }}</div>
-        <div class="sub">發起者:{{ v.initiator }} 截止時間:{{ formatDeadline(v.deadline_at) }}</div>
+        <div class="sub">
+          發起者:{{ v.initiator }} 截止時間:
+          <span :class="{ 'text-danger': v.status === 'failed' }">
+            {{ formatDeadline(v.deadline_at) }}
+            <template v-if="v.status === 'failed'">(已截止, ERR:票數相同)</template>
+          </span>
+        </div>
       </div>
       <div class="chevron">›</div>
     </div>

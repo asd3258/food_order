@@ -56,6 +56,10 @@ async function handleAction() {
   if (!requireLogin()) return
   const ids = Array.from(selected.value)
   const isoDeadline = partsToIso(deadline.value)
+  if (new Date(isoDeadline).getTime() < Date.now()) {
+    toast('截止時間不能早於現在')
+    return
+  }
   if (ids.length === 1) {
     const order = await api.createOrder({ restaurant_id: ids[0], initiator: userStore.username, deadline_at: isoDeadline })
     toast('已開出訂單')

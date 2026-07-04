@@ -57,7 +57,12 @@ onUnmounted(() => {
 
 async function updateDeadline() {
   if (!editDeadline.value) return
-  await api.updateVoteDeadline(batchId, partsToIso(editDeadline.value), userStore.username)
+  const isoDeadline = partsToIso(editDeadline.value)
+  if (new Date(isoDeadline).getTime() < Date.now()) {
+    toast('截止時間不能早於現在')
+    return
+  }
+  await api.updateVoteDeadline(batchId, isoDeadline, userStore.username)
   toast('已更新截止時間')
   load()
 }
