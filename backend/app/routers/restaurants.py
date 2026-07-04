@@ -189,7 +189,7 @@ def update_restaurant(restaurant_id: int, payload: schemas.RestaurantUpdate,
 
 
 @router.delete("/{restaurant_id}", status_code=204)
-def delete_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
+def delete_restaurant(restaurant_id: int, acting_user: str, db: Session = Depends(get_db)):
     """v0.7: 編輯餐廳資料 gets a delete button. Open to any logged-in user
     (same as editing a restaurant), not admin-gated.
 
