@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { api, type RestaurantSummary, type RestaurantType } from '../api'
 import { HOURS, MINUTES, defaultDeadline, partsToIso, type DeadlineParts } from '../deadline'
 import { userStore } from '../stores/user'
+import { orderVoteFilters } from '../stores/filters'
 import { toast } from '../stores/toast'
 import { alertWarning } from '../stores/confirm'
 import { requireLogin } from '../auth'
@@ -11,8 +12,6 @@ import { requireLogin } from '../auth'
 const router = useRouter()
 const restaurants = ref<RestaurantSummary[]>([])
 const types = ref<RestaurantType[]>([])
-const q = ref('')
-const typeFilter = ref('')
 const selected = ref<Set<number>>(new Set())
 const deadline = ref<DeadlineParts>(defaultDeadline())
 
@@ -20,7 +19,7 @@ async function load() {
   // v0.12: 開單與投票一律依「★常用優先,再依名稱」排序,不管有沒有搜尋/篩選都
   // 套用同一套邏輯(不像餐廳清單有排序按鈕可以切換)。
   restaurants.value = await api.listRestaurants(
-    q.value, typeFilter.value || undefined, 'star', userStore.username || undefined)
+    orderVoteFilters.q, orderVoteFilters.typeFilter || undefined, 'star', userStore.username || undefined)
 }
 async function loadTypes() {
   try {
@@ -31,8 +30,8 @@ async function loadTypes() {
 }
 onMounted(load)
 onMounted(loadTypes)
-watch(q, load)
-watch(typeFilter, load)
+watch(() => orderVoteFilters.q, load)
+watch(() => orderVoteFilters.typeFilter, load)
 
 function toggle(id: number, checked: boolean) {
   const s = new Set(selected.value)
@@ -84,11 +83,11 @@ async function handleAction() {
   <section class="block">
     <h2>選擇餐廳</h2>
     <div class="search-row">
-      <input v-model="q" type="text" placeholder="搜尋餐廳或品項名稱" />
+      <input v-model="orderVoteFilters.q" type="text" placeholder="搜尋餐廳或品項名稱" />
     </div>
     <div class="type-filter-row">
-      <span class="type-chip" :class="{ active: typeFilter === '' }" @click="typeFilter = ''">全部</span>
-      <span v-for="t in types" :key="t.id" class="type-chip" :class="{ active: typeFilter === t.name }" @click="typeFilter = t.name">{{ t.name }}</span>
+      <span class="type-chip" :class="{ active: orderVoteFilters.typeFilter === '' }" @click="orderVoteFilters.typeFilter = ''">全部</span>
+      <span v-for="t in types" :key="t.id" class="type-chip" :class="{ active: orderVoteFilters.typeFilter === t.name }" @click="orderVoteFilters.typeFilter = t.name">{{ t.name }}</span>
     </div>
 
     <div v-if="restaurants.length === 0" class="empty">找不到符合的餐廳</div>

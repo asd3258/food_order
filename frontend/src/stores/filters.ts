@@ -6,8 +6,15 @@ export const restaurantListFilters = reactive({
   sort: 'star' as 'star' | 'created_desc' | 'name'
 })
 
+export const orderVoteFilters = reactive({
+  q: '',
+  typeFilter: ''
+})
+
 export function resetFilters() {
   restaurantListFilters.q = ''
   restaurantListFilters.typeFilter = ''
   restaurantListFilters.sort = 'star'
+  orderVoteFilters.q = ''
+  orderVoteFilters.typeFilter = ''
 }
