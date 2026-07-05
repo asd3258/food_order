@@ -20,7 +20,7 @@ async function sendCode() {
   }
   
   // Basic email format check
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+  if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email.value)) {
     toast('請輸入有效的 Email 格式')
     return
   }

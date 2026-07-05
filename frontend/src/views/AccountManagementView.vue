@@ -41,7 +41,7 @@ async function updateEmail() {
     toast('請輸入 Email')
     return
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value.trim())) {
+  if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(emailInput.value.trim())) {
     toast('請輸入有效的 Email 格式')
     return
   }
