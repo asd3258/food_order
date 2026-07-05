@@ -38,10 +38,12 @@ onMounted(load)
 async function updateEmail() {
   emailInvalid.value = false
   if (!emailInput.value.trim()) {
+    emailInvalid.value = true
     toast('請輸入 Email')
     return
   }
   if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(emailInput.value.trim())) {
+    emailInvalid.value = true
     toast('請輸入有效的 Email 格式')
     return
   }
