@@ -18,6 +18,9 @@ const confirmPassword = ref('')
 const updatingEmail = ref(false)
 const updatingPassword = ref(false)
 const emailInvalid = ref(false)
+const currentPasswordInvalid = ref(false)
+const newPasswordInvalid = ref(false)
+const confirmPasswordInvalid = ref(false)
 
 async function load() {
   if (!userStore.isLoggedIn) {
@@ -62,6 +65,9 @@ async function updateEmail() {
 
 async function updatePassword() {
   emailInvalid.value = false
+  currentPasswordInvalid.value = false
+  newPasswordInvalid.value = false
+  confirmPasswordInvalid.value = false
   
   if (!emailInput.value.trim()) {
     emailInvalid.value = true
@@ -76,14 +82,23 @@ async function updatePassword() {
   }
   
   if (hasPassword.value && !currentPassword.value) {
+    currentPasswordInvalid.value = true
     toast('請輸入目前密碼')
     return
   }
-  if (!newPassword.value || !confirmPassword.value) {
-    toast('請輸入新密碼與確認密碼')
+  if (!newPassword.value) {
+    newPasswordInvalid.value = true
+    toast('請輸入新密碼')
+    return
+  }
+  if (!confirmPassword.value) {
+    confirmPasswordInvalid.value = true
+    toast('請輸入確認新密碼')
     return
   }
   if (newPassword.value !== confirmPassword.value) {
+    newPasswordInvalid.value = true
+    confirmPasswordInvalid.value = true
     toast('新密碼與確認密碼不相符')
     return
   }
@@ -113,7 +128,7 @@ async function updatePassword() {
   <section class="block card">
     <h2>Email 設定</h2>
     <div class="form-group">
-      <input v-model="emailInput" type="email" placeholder="輸入您的 Email" :class="{ 'time-select-invalid': emailInvalid }" />
+      <input v-model="emailInput" type="email" placeholder="輸入您的 Email" :class="{ 'input-invalid': emailInvalid }" />
       <small style="color: var(--text-muted); display: block; margin-top: 4px;">
         用於找回密碼
       </small>
@@ -126,13 +141,13 @@ async function updatePassword() {
   <section class="block card">
     <h2>變更密碼</h2>
     <div v-if="hasPassword" class="form-group">
-      <input v-model="currentPassword" type="password" placeholder="目前密碼" />
+      <input v-model="currentPassword" type="password" placeholder="目前密碼" :class="{ 'input-invalid': currentPasswordInvalid }" />
     </div>
     <div class="form-group">
-      <input v-model="newPassword" type="password" placeholder="新密碼" />
+      <input v-model="newPassword" type="password" placeholder="新密碼" :class="{ 'input-invalid': newPasswordInvalid }" />
     </div>
     <div class="form-group">
-      <input v-model="confirmPassword" type="password" placeholder="確認新密碼" />
+      <input v-model="confirmPassword" type="password" placeholder="確認新密碼" :class="{ 'input-invalid': confirmPasswordInvalid }" />
     </div>
     <button class="btn btn-primary" :disabled="updatingPassword" @click="updatePassword">
       {{ updatingPassword ? '變更中...' : '變更密碼' }}

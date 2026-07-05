@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api'
@@ -18,14 +18,14 @@ async function sendCode() {
   emailInvalid.value = false
   if (!name.value.trim() || !email.value.trim()) {
     if (!email.value.trim()) emailInvalid.value = true
-    toast('請輸入帳號與 Email')
+    toast('隢撓?亙董?? Email')
     return
   }
   
   // Basic email format check
   if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email.value)) {
     emailInvalid.value = true
-    toast('請輸入有效的 Email 格式')
+    toast('隢撓?交??? Email ?澆?')
     return
   }
   
@@ -50,11 +50,11 @@ async function sendCode() {
 
 async function loginWithCode() {
   if (!tempCode.value.trim()) {
-    toast('請輸入臨時密碼')
+    toast('隢撓?亥??蝣?)
     return
   }
   if (!name.value.trim()) {
-    toast('請輸入帳號')
+    toast('隢撓?亙董??)
     return
   }
   
@@ -72,28 +72,28 @@ async function loginWithCode() {
 
 <template>
   <div class="page-header">
-    <router-link class="back" to="/login">←</router-link>
-    <h1>忘記密碼</h1>
+    <router-link class="back" to="/login">??/router-link>
+    <h1>敹?撖Ⅳ</h1>
   </div>
 
   <div class="card">
     <div class="form-group">
-      <input v-model="name" type="text" placeholder="請輸入帳號" required />
+      <input v-model="name" type="text" placeholder="隢撓?亙董?? required />
     </div>
     <div class="form-group">
-      <input v-model="email" type="email" placeholder="請輸入 Email" required :class="{ 'time-select-invalid': emailInvalid }" />
+      <input v-model="email" type="email" placeholder="隢撓??Email" required :class="{ 'input-invalid': emailInvalid }" />
     </div>
     <button class="btn btn-secondary btn-full" :disabled="countdown > 0 || sending || !name || !email" @click="sendCode">
-      {{ countdown > 0 ? `請稍候 ${countdown} 秒` : (sending ? '發送中...' : '寄送臨時密碼') }}
+      {{ countdown > 0 ? `隢???${countdown} 蝘 : (sending ? '?潮葉...' : '撖??蝣?) }}
     </button>
     
     <hr style="border:none;border-top:1px solid var(--border);margin:18px 0;" />
     
     <div class="form-group">
-      <input v-model="tempCode" type="text" placeholder="請輸入臨時密碼" required @keyup.enter="loginWithCode" />
+      <input v-model="tempCode" type="text" placeholder="隢撓?亥??蝣? required @keyup.enter="loginWithCode" />
     </div>
     <button class="btn btn-primary btn-full" :disabled="!tempCode || loggingIn" @click="loginWithCode">
-      {{ loggingIn ? '登入中...' : '登入' }}
+      {{ loggingIn ? '?餃銝?..' : '?餃' }}
     </button>
   </div>
 </template>

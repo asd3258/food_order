@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type VoteBatchOut } from '../api'
@@ -16,10 +16,10 @@ const batch = ref<VoteBatchOut | null>(null)
 const editDeadline = ref<DeadlineParts | null>(null)
 const pendingSelection = ref<number | null>(null)
 
-// v0.12: 改用 userStore.can 統一判斷權限
+// v0.12: ?寧 userStore.can 蝯曹??斗甈?
 const isInitiator = computed(() => {
   if (!batch.value) return false
-  return userStore.can('投票', 'delete', batch.value.initiator)
+  return userStore.can('?巨', 'delete', batch.value.initiator)
 })
 
 const attemptedSubmit = ref(false)
@@ -67,22 +67,22 @@ async function updateDeadline() {
   attemptedSubmit.value = true
   const isoDeadline = partsToIso(editDeadline.value)
   if (new Date(isoDeadline).getTime() < Date.now()) {
-    await alertWarning('截止時間不能早於現在')
+    await alertWarning('?芣迫??銝?拇?曉')
     return
   }
   await api.updateVoteDeadline(batchId, isoDeadline, userStore.username)
-  toast('已更新截止時間')
+  toast('撌脫?唳甇Ｘ???)
   load()
 }
 
 async function save() {
   if (!requireLogin()) return
   if (pendingSelection.value == null) {
-    toast('請先選擇一家餐廳')
+    toast('隢??豢?銝摰園?撱?)
     return
   }
   await api.saveMyChoice(batchId, userStore.username, pendingSelection.value)
-  toast('已鎖定投票')
+  toast('撌脤?摰?蟡?)
   load()
 }
 async function edit() {
@@ -92,22 +92,22 @@ async function edit() {
   // the vote stops counting toward the tally right away, and the user must
   // pick again and press Save to be counted.
   await api.clearMyChoice(batchId, userStore.username)
-  toast('已清除您的選擇,請重新選擇並按 Save')
+  toast('撌脫??斗???隢??圈?蒂??Save')
   load()
 }
 
 async function tally() {
-  const ok = await confirmAction('確定要開票嗎?將依目前票數最高的餐廳自動建立訂單。')
+  const ok = await confirmAction('蝣箏?閬?蟡典??撠??桀?蟡冽?擃?擗輒?芸?撱箇?閮??)
   if (!ok) return
   const order = await api.decideVote(batchId, userStore.username)
-  toast('已開票,已建立訂單')
+  toast('撌脤?蟡?撌脣遣蝡???)
   router.push(`/orders/${order.id}`)
 }
 async function remove() {
-  const ok = await confirmAction('確定要刪除此投票嗎?此動作無法復原。')
+  const ok = await confirmAction('蝣箏?閬?斗迨?巨??甇文?雿瘜儔??)
   if (!ok) return
   await api.deleteVote(batchId, userStore.username)
-  toast('已刪除投票')
+  toast('撌脣?斗?蟡?)
   router.push('/')
 }
 
@@ -120,45 +120,45 @@ function doCopyLink() {
 }
 function doShare() {
   const names = batch.value?.candidates.map((c) => c.restaurant_name).join('/') || ''
-  shareLink(`投票${batchId}`, `幫忙投一票吃什麼(${names}),點連結進去選:`, currentUrl())
+  shareLink(`?巨${batchId}`, `撟怠???蟡典?隞暻?${names}),暺???脣??`, currentUrl())
 }
 </script>
 
 <template>
   <div class="page-header">
-    <router-link class="back" to="/">←</router-link>
-    <h1>投票{{ batchId }}</h1>
+    <router-link class="back" to="/">??/router-link>
+    <h1>?巨{{ batchId }}</h1>
   </div>
 
   <template v-if="batch">
     <div class="btn-row">
-      <button class="btn btn-secondary" @click="doCopyLink">🔗 複製連結</button>
-      <button v-if="shareSupported" class="btn btn-secondary" @click="doShare">📤 分享</button>
+      <button class="btn btn-secondary" @click="doCopyLink">?? 銴ˊ???</button>
+      <button v-if="shareSupported" class="btn btn-secondary" @click="doShare">? ?澈</button>
     </div>
 
     <div v-if="!isInitiator" class="deadline-inline">
-      <span>截止時間</span><strong>{{ formatDeadline(batch.deadline_at) }}</strong>
+      <span>?芣迫??</span><strong>{{ formatDeadline(batch.deadline_at) }}</strong>
     </div>
     <div v-else-if="editDeadline" class="deadline-inline">
-      <span>截止時間</span>
-      <input v-model="editDeadline.date" type="date" class="time-select" :class="{ 'time-select-invalid': isDeadlineInvalid }" />
-      <select v-model.number="editDeadline.hour" class="time-select" :class="{ 'time-select-invalid': isDeadlineInvalid }">
+      <span>?芣迫??</span>
+      <input v-model="editDeadline.date" type="date" class="time-select" :class="{ 'input-invalid': isDeadlineInvalid }" />
+      <select v-model.number="editDeadline.hour" class="time-select" :class="{ 'input-invalid': isDeadlineInvalid }">
         <option v-for="h in HOURS" :key="h" :value="h">{{ String(h).padStart(2, '0') }}</option>
       </select>
       <span>:</span>
-      <select v-model.number="editDeadline.minute" class="time-select" :class="{ 'time-select-invalid': isDeadlineInvalid }">
+      <select v-model.number="editDeadline.minute" class="time-select" :class="{ 'input-invalid': isDeadlineInvalid }">
         <option v-for="m in MINUTES" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
       </select>
-      <button class="btn btn-secondary" style="flex:none;padding:7px 12px;" @click="updateDeadline">更新</button>
+      <button class="btn btn-secondary" style="flex:none;padding:7px 12px;" @click="updateDeadline">?湔</button>
     </div>
 
     <div v-if="isInitiator" class="btn-row">
-      <button class="btn btn-primary" @click="tally">開票</button>
-      <button class="btn btn-danger" @click="remove">刪除</button>
+      <button class="btn btn-primary" @click="tally">?巨</button>
+      <button class="btn btn-danger" @click="remove">?芷</button>
     </div>
 
     <section class="block">
-      <h2>候選餐廳</h2>
+      <h2>?擗輒</h2>
       <div class="card">
         <label v-for="c in batch.candidates" :key="c.restaurant_id" class="checkbox-item" :style="batch.my_locked ? 'opacity:.55' : ''">
           <input
@@ -170,9 +170,9 @@ function doShare() {
             @change="pendingSelection = c.restaurant_id"
           />
           <span class="cname">{{ c.restaurant_name }}</span>
-          <span style="font-size:12px;color:var(--muted);background:#f0f0f0;padding:2px 8px;border-radius:10px;">{{ c.count }} 票</span>
+          <span style="font-size:12px;color:var(--muted);background:#f0f0f0;padding:2px 8px;border-radius:10px;">{{ c.count }} 蟡?/span>
         </label>
-        <div class="btn-row" style="margin-top:10px;margin-bottom:0;" v-if="userStore.can('投票', 'update', batch.initiator)">
+        <div class="btn-row" style="margin-top:10px;margin-bottom:0;" v-if="userStore.can('?巨', 'update', batch.initiator)">
           <button v-if="!batch.my_locked" class="btn btn-primary" @click="save">Save</button>
           <button v-else class="btn btn-primary" @click="edit">Edit</button>
         </div>
