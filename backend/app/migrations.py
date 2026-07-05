@@ -208,6 +208,16 @@ def run_light_migrations() -> None:
     except Exception as e:
         print(f"[migrations] failed to make orders.deadline_at nullable: {e}")
 
+    # v0.16: Remove email unique constraint
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key"))
+            conn.execute(text("DROP INDEX IF EXISTS ix_users_email"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_email ON users (email)"))
+        print("[migrations] dropped unique constraint on users.email")
+    except Exception as e:
+        pass
+
     _migrate_extra_price_to_float()
 
     # v0.11: make sure the MinIO bucket exists/is public-read before the

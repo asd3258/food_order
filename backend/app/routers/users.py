@@ -177,11 +177,6 @@ def update_email(payload: schemas.UpdateEmailIn, db: Session = Depends(get_db)):
     if not u:
         raise HTTPException(404, "User not found")
         
-    # Check if email is used by someone else
-    dup = db.query(models.User).filter(func.lower(models.User.email) == payload.email.lower(), models.User.id != u.id).first()
-    if dup:
-        raise HTTPException(400, "此 Email 已被其他帳號使用")
-        
     u.email = payload.email.strip()
     db.commit()
     return {"message": "Email已更新"}
