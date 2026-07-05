@@ -103,6 +103,13 @@ async function updatePassword() {
     return
   }
   
+  if (hasPassword.value && currentPassword.value === newPassword.value) {
+    currentPasswordInvalid.value = true
+    newPasswordInvalid.value = true
+    await alertWarning('新舊密碼不能相同')
+    return
+  }
+  
   updatingPassword.value = true
   try {
     const res = await api.updatePassword(userStore.username, currentPassword.value, newPassword.value)
