@@ -1,4 +1,4 @@
-﻿:root{
+:root{
   --brand:#5b5fc7;
   --brand-dark:#4a4ecb;
   --bg:#f3f2f1;
@@ -171,9 +171,9 @@ select.time-select,input.time-select{padding:8px 9px;border:1px solid var(--bord
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#242424;color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:80;}
 .toast.show{opacity:1;}
 
-/* v0.11: 憭批?璅∪? -- ?曉之撣貉??恍銝??內??摮??嫣噶??犖雿輻?ㄐ?芾???
-   ?撣詨?整??閬?皜???蝝?璅?/撠汗/皜/??/銵典),銝瘥?璇?CSS 閬?
-   ?賡??曉之,隞亙?憭扳?港遢璅??銵具??撘? MoreView.vue + stores/user.ts??*/
+/* v0.11: 大字模式 -- 放大常見畫面上的圖示與文字,方便老花的人使用。這裡只覆蓋
+   最常出現、最需要看清楚的元素(標題/導覽/清單/按鈕/表單),不是每一條 CSS 規則
+   都逐一放大,以免大改整份樣式表。切換方式見 MoreView.vue + stores/user.ts。 */
 html.large-mode header.topbar .title{font-size:22px;}
 html.large-mode .login-status{font-size:16px;}
 html.large-mode .login-bar button{font-size:16px;padding:10px 18px;}
