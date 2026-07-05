@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { api } from '../api'
 import { toast } from '../stores/toast'
 import { userStore } from '../stores/user'
+import { alertWarning } from '../stores/confirm'
 
 const router = useRouter()
 const currentEmail = ref('')
@@ -16,6 +17,7 @@ const confirmPassword = ref('')
 
 const updatingEmail = ref(false)
 const updatingPassword = ref(false)
+const emailInvalid = ref(false)
 
 async function load() {
   if (!userStore.isLoggedIn) {
@@ -34,6 +36,7 @@ async function load() {
 onMounted(load)
 
 async function updateEmail() {
+  emailInvalid.value = false
   if (!emailInput.value.trim()) {
     toast('請輸入 Email')
     return
@@ -56,10 +59,20 @@ async function updateEmail() {
 }
 
 async function updatePassword() {
-  if (!currentEmail.value) {
+  emailInvalid.value = false
+  
+  if (!emailInput.value.trim()) {
+    emailInvalid.value = true
     toast('變更密碼前請先設定 Email')
     return
   }
+  
+  if (emailInput.value.trim() !== currentEmail.value) {
+    emailInvalid.value = true
+    await alertWarning('輸入的 Email 與目前設定不同，請先點擊「儲存 Email」進行變更')
+    return
+  }
+  
   if (hasPassword.value && !currentPassword.value) {
     toast('請輸入目前密碼')
     return
@@ -98,7 +111,7 @@ async function updatePassword() {
   <section class="block card">
     <h2>Email 設定</h2>
     <div class="form-group">
-      <input v-model="emailInput" type="email" placeholder="輸入您的 Email" />
+      <input v-model="emailInput" type="email" placeholder="輸入您的 Email" :class="{ 'time-select-invalid': emailInvalid }" />
       <small style="color: var(--text-muted); display: block; margin-top: 4px;">
         用於找回密碼
       </small>
