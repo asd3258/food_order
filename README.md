@@ -28,7 +28,7 @@ food_order/
 cd backend
 python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env      # 預設用 SQLite，不需要另外裝 Postgres
+cp .env.example .env      # 本機開發預設會使用 SQLite，不需另外架設 Postgres (Docker 環境才會自動串接 Postgres)
 python -m app.seed        # 灌入預設測試資料 (餐廳與訂單)
 uvicorn app.main:app --reload --port 58000
 ```
