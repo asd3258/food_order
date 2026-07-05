@@ -181,6 +181,28 @@ def _seed_restaurant_types(db) -> None:
     print("[migrations] seeded restaurant types")
 
 
+def _backfill_restaurant_periods(db) -> None:
+    """v0.17: Backfill restaurant_periods for existing restaurants.
+    If a restaurant has no periods, assume it is open every day (0000-2359)."""
+    restaurants = db.query(models.Restaurant.id).all()
+    added = 0
+    for r in restaurants:
+        r_id = r[0]
+        has_period = db.query(models.RestaurantPeriod).filter(models.RestaurantPeriod.restaurant_id == r_id).first()
+        if not has_period:
+            for day in range(7):
+                db.add(models.RestaurantPeriod(
+                    restaurant_id=r_id,
+                    day=day,
+                    open_time="0000",
+                    close_time="2359"
+                ))
+            added += 1
+    if added > 0:
+        db.commit()
+        print(f"[migrations] backfilled periods for {added} existing restaurants")
+
+
 def run_light_migrations() -> None:
     # v0.10: 營業時間 on restaurants, 分類 on menu_items.
     _add_column_if_missing("restaurants", "hours", "TEXT")
@@ -218,6 +240,9 @@ def run_light_migrations() -> None:
     except Exception as e:
         pass
 
+    # v0.17: place_cache periods
+    _add_column_if_missing("place_cache", "periods", "JSON", default_sql="'[]'")
+
     _migrate_extra_price_to_float()
 
     # v0.11: make sure the MinIO bucket exists/is public-read before the
@@ -228,6 +253,7 @@ def run_light_migrations() -> None:
             _rename_mike_admin_to_admin(db)
             _seed_default_permissions(db)
             _seed_restaurant_types(db)
+            _backfill_restaurant_periods(db)
             _migrate_photos_to_object_storage(db)
         finally:
             db.close()

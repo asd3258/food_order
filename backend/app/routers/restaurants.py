@@ -20,12 +20,13 @@ def _restaurant_query(db: Session):
     return db.query(models.Restaurant).options(
         joinedload(models.Restaurant.photos),
         joinedload(models.Restaurant.menu_items).joinedload(models.MenuItem.options),
+        joinedload(models.Restaurant.periods),
     )
 
 
 @router.get("", response_model=list[schemas.RestaurantSummaryOut])
 def list_restaurants(q: Optional[str] = None, type: Optional[str] = None, sort: str = "created_desc",
-                      user: Optional[str] = None, db: Session = Depends(get_db)):
+                      user: Optional[str] = None, days: Optional[str] = None, db: Session = Depends(get_db)):
     """v0.5: `q` matches restaurant name OR any menu item name; `type` filters
     by restaurant type. Both combine with AND, matching SPEC.md section 3.
     v0.11: `sort` replaces the old manual drag-to-reorder feature with fixed
@@ -33,7 +34,8 @@ def list_restaurants(q: Optional[str] = None, type: Optional[str] = None, sort: 
     (v0.12) "star" (★常用優先,再依名稱).
     v0.12: `user` -- 用來算每筆餐廳目前是否已被這個使用者加入★常用
     (is_favorite),也是 sort="star" 時用來排序的依據。沒帶 user 的話
-    is_favorite 全部是 False,star 排序就退化成純名稱排序。"""
+    is_favorite 全部是 False,star 排序就退化成純名稱排序。
+    v0.17: `days` -- 逗號分隔的整數(0=週日, 1=週一...), 篩選這些天數有營業的餐廳 (OR 邏輯)。"""
     query = db.query(models.Restaurant)
     if type:
         query = query.filter(
@@ -42,6 +44,12 @@ def list_restaurants(q: Optional[str] = None, type: Optional[str] = None, sort: 
             models.Restaurant.type.like(f"%,{type}") |
             models.Restaurant.type.like(f"%,{type},%")
         )
+    
+    if days:
+        day_list = [int(d) for d in days.split(",") if d.strip().isdigit()]
+        if day_list:
+            query = query.filter(models.Restaurant.periods.any(models.RestaurantPeriod.day.in_(day_list)))
+
     restaurants = query.all()
 
     fav_ids: set[int] = set()
@@ -126,6 +134,8 @@ def create_restaurant(payload: schemas.RestaurantIn, db: Session = Depends(get_d
                            created_by=payload.created_by)
     db.add(r)
     db.flush()
+    for p in payload.periods:
+        db.add(models.RestaurantPeriod(restaurant_id=r.id, day=p.day, open_time=p.open_time, close_time=p.close_time))
     for item in payload.menu_items:
         mi = models.MenuItem(restaurant_id=r.id, name=item.name, price=item.price, category=item.category)
         db.add(mi)
@@ -160,6 +170,13 @@ def update_restaurant(restaurant_id: int, payload: schemas.RestaurantUpdate,
         if not payload.type.strip():
             raise HTTPException(400, "請輸入餐廳類型")
         r.type = payload.type.strip()
+        
+    if payload.periods is not None:
+        db.query(models.RestaurantPeriod).filter(models.RestaurantPeriod.restaurant_id == r.id).delete(synchronize_session=False)
+        db.flush()
+        for p in payload.periods:
+            db.add(models.RestaurantPeriod(restaurant_id=r.id, day=p.day, open_time=p.open_time, close_time=p.close_time))
+
     if payload.menu_items is not None:
         # Query.delete() is a *bulk* DELETE -- it bypasses SQLAlchemy's ORM
         # cascade rules entirely (those only fire on session.delete()/unit-
@@ -221,7 +238,7 @@ def delete_restaurant(restaurant_id: int, acting_user: str, db: Session = Depend
     db.query(models.Vote).filter(
         models.Vote.restaurant_id == restaurant_id).delete()
 
-    db.delete(r)  # cascades to RestaurantPhoto + MenuItem (+ MenuItemOption)
+    db.delete(r)  # cascades to RestaurantPhoto + MenuItem (+ MenuItemOption) + RestaurantPeriod
     db.commit()
     return None
 
@@ -266,6 +283,7 @@ def fetch_place_info_endpoint(payload: schemas.PlaceInfoIn, request: Request, db
                 phone=cached.phone,
                 address=cached.address,
                 hours=cached.hours,
+                periods=cached.periods,
                 is_cached=True
             )
 
@@ -281,6 +299,7 @@ def fetch_place_info_endpoint(payload: schemas.PlaceInfoIn, request: Request, db
             cached.phone = data.get("phone", "")
             cached.address = data.get("address", "")
             cached.hours = data.get("hours", "")
+            cached.periods = data.get("periods", [])
             cached.updated_date = today
             db.commit()
             

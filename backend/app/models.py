@@ -69,6 +69,8 @@ class Restaurant(Base):
                            cascade="all, delete-orphan", order_by="RestaurantPhoto.sort_order")
     menu_items = relationship("MenuItem", back_populates="restaurant",
                                cascade="all, delete-orphan", order_by="MenuItem.id")
+    periods = relationship("RestaurantPeriod", back_populates="restaurant",
+                            cascade="all, delete-orphan", order_by="RestaurantPeriod.day")
 
 
 class RestaurantType(Base):
@@ -88,6 +90,18 @@ class RestaurantFavorite(Base):
     user = Column(String, nullable=False)
     restaurant_id = Column(Integer, ForeignKey("restaurants.id"), nullable=False)
     created_at = Column(DateTime, default=utcnow)
+
+
+class RestaurantPeriod(Base):
+    """v0.17: Stores structured opening hours (periods) for restaurants."""
+    __tablename__ = "restaurant_periods"
+    id = Column(Integer, primary_key=True, index=True)
+    restaurant_id = Column(Integer, ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=False)
+    day = Column(Integer, nullable=False)           # 0=Sunday, 1=Monday, ..., 6=Saturday
+    open_time = Column(String(4), default="0000")   # e.g. "0900"
+    close_time = Column(String(4), default="2359")  # e.g. "2100"
+
+    restaurant = relationship("Restaurant", back_populates="periods")
 
 
 class RestaurantPhoto(Base):
@@ -261,5 +275,6 @@ class PlaceCache(Base):
     phone = Column(String, default="")
     address = Column(String, default="")
     hours = Column(Text, default="")
+    periods = Column(JSON, default=list)  # v0.17: cached structured periods
     updated_date = Column(String, nullable=False)  # Store as YYYY-MM-DD
 

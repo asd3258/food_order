@@ -15,11 +15,43 @@ const types = ref<RestaurantType[]>([])
 const selected = ref<Set<number>>(new Set())
 const deadline = ref<DeadlineParts>(defaultDeadline())
 
+const DAYS_OF_WEEK = [
+  { val: 0, label: '今天' },
+  { val: 1, label: '一' },
+  { val: 2, label: '二' },
+  { val: 3, label: '三' },
+  { val: 4, label: '四' },
+  { val: 5, label: '五' },
+  { val: 6, label: '六' },
+  { val: 7, label: '日' }
+]
+
+function toggleDayFilter(val: number) {
+  const arr = orderVoteFilters.daysFilter
+  const today = new Date().getDay()
+  const realVal = val === 0 ? today : (val === 7 ? 0 : val)
+  
+  const idx = arr.indexOf(realVal)
+  if (idx !== -1) {
+    arr.splice(idx, 1)
+  } else {
+    arr.push(realVal)
+  }
+  load()
+}
+
+function isDayFilterActive(val: number) {
+  const today = new Date().getDay()
+  const realVal = val === 0 ? today : (val === 7 ? 0 : val)
+  return orderVoteFilters.daysFilter.includes(realVal)
+}
+
 async function load() {
   // v0.12: 開單與投票一律依「★常用優先,再依名稱」排序,不管有沒有搜尋/篩選都
   // 套用同一套邏輯(不像餐廳清單有排序按鈕可以切換)。
+  const daysStr = orderVoteFilters.daysFilter.length > 0 ? orderVoteFilters.daysFilter.join(',') : undefined
   restaurants.value = await api.listRestaurants(
-    orderVoteFilters.q, orderVoteFilters.typeFilter || undefined, 'star', userStore.username || undefined)
+    orderVoteFilters.q, orderVoteFilters.typeFilter || undefined, 'star', userStore.username || undefined, daysStr)
 }
 async function loadTypes() {
   try {
@@ -88,6 +120,11 @@ async function handleAction() {
     <div class="type-filter-row">
       <span class="type-chip" :class="{ active: orderVoteFilters.typeFilter === '' }" @click="orderVoteFilters.typeFilter = ''">全部</span>
       <span v-for="t in types" :key="t.id" class="type-chip" :class="{ active: orderVoteFilters.typeFilter === t.name }" @click="orderVoteFilters.typeFilter = t.name">{{ t.name }}</span>
+    </div>
+    <div class="type-filter-row">
+      <span v-for="d in DAYS_OF_WEEK" :key="d.val" class="type-chip" :class="{ active: isDayFilterActive(d.val) }" @click="toggleDayFilter(d.val)">
+        {{ d.label }}
+      </span>
     </div>
 
     <div v-if="restaurants.length === 0" class="empty">找不到符合的餐廳</div>

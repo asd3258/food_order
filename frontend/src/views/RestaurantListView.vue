@@ -10,9 +10,41 @@ const router = useRouter()
 const restaurants = ref<RestaurantSummary[]>([])
 const types = ref<RestaurantType[]>([])
 
+const DAYS_OF_WEEK = [
+  { val: 0, label: '今天' },
+  { val: 1, label: '一' },
+  { val: 2, label: '二' },
+  { val: 3, label: '三' },
+  { val: 4, label: '四' },
+  { val: 5, label: '五' },
+  { val: 6, label: '六' },
+  { val: 7, label: '日' }
+]
+
+function toggleDayFilter(val: number) {
+  const arr = restaurantListFilters.daysFilter
+  const today = new Date().getDay()
+  const realVal = val === 0 ? today : (val === 7 ? 0 : val)
+  
+  const idx = arr.indexOf(realVal)
+  if (idx !== -1) {
+    arr.splice(idx, 1)
+  } else {
+    arr.push(realVal)
+  }
+  load()
+}
+
+function isDayFilterActive(val: number) {
+  const today = new Date().getDay()
+  const realVal = val === 0 ? today : (val === 7 ? 0 : val)
+  return restaurantListFilters.daysFilter.includes(realVal)
+}
+
 async function load() {
+  const daysStr = restaurantListFilters.daysFilter.length > 0 ? restaurantListFilters.daysFilter.join(',') : undefined
   restaurants.value = await api.listRestaurants(
-    restaurantListFilters.q, restaurantListFilters.typeFilter || undefined, restaurantListFilters.sort, userStore.username || undefined)
+    restaurantListFilters.q, restaurantListFilters.typeFilter || undefined, restaurantListFilters.sort, userStore.username || undefined, daysStr)
 }
 async function loadTypes() {
   try {
@@ -57,10 +89,15 @@ async function toggleFavorite(r: RestaurantSummary) {
   <div class="search-row">
     <input v-model="restaurantListFilters.q" type="text" placeholder="搜尋餐廳或品項名稱" />
   </div>
-    <div class="type-filter-row">
-      <span class="type-chip" :class="{ active: restaurantListFilters.typeFilter === '' }" @click="restaurantListFilters.typeFilter = ''">全部</span>
-      <span v-for="t in types" :key="t.id" class="type-chip" :class="{ active: restaurantListFilters.typeFilter === t.name }" @click="restaurantListFilters.typeFilter = t.name">{{ t.name }}</span>
-    </div>
+  <div class="type-filter-row">
+    <span class="type-chip" :class="{ active: restaurantListFilters.typeFilter === '' }" @click="restaurantListFilters.typeFilter = ''">全部</span>
+    <span v-for="t in types" :key="t.id" class="type-chip" :class="{ active: restaurantListFilters.typeFilter === t.name }" @click="restaurantListFilters.typeFilter = t.name">{{ t.name }}</span>
+  </div>
+  <div class="type-filter-row">
+    <span v-for="d in DAYS_OF_WEEK" :key="d.val" class="type-chip" :class="{ active: isDayFilterActive(d.val) }" @click="toggleDayFilter(d.val)">
+      {{ d.label }}
+    </span>
+  </div>
   <div class="type-filter-row">
     <span class="type-chip" :class="{ active: restaurantListFilters.sort === 'star' }" @click="setSort('star')">預設排序</span>
     <span class="type-chip" :class="{ active: restaurantListFilters.sort === 'name' }" @click="setSort('name')">名稱排序</span>

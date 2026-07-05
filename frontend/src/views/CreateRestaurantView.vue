@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { api, RESTAURANT_TYPES } from '../api'
+import { api, RESTAURANT_TYPES, type RestaurantPeriod } from '../api'
 import { userStore } from '../stores/user'
 import { toast } from '../stores/toast'
 import { requireLogin } from '../auth'
@@ -28,10 +28,44 @@ const address = ref('')
 const hours = ref('')
 const selectedTypes = ref<string[]>([])
 const types = ref<{ id: number, name: string }[]>([])
+const exactPeriods = ref<RestaurantPeriod[]>([])
 const items = ref<ItemDraft[]>([])
 const parsingMenu = ref(false)
 const fetchingPlace = ref(false)
 const menuFileInput = ref<HTMLInputElement | null>(null)
+
+const openDays = computed({
+  get() {
+    return Array.from(new Set(exactPeriods.value.map(p => p.day)))
+  },
+  set(days: number[]) {
+    const newPeriods: RestaurantPeriod[] = []
+    for (const d of days) {
+      const existing = exactPeriods.value.filter(p => p.day === d)
+      if (existing.length > 0) {
+        newPeriods.push(...existing)
+      } else {
+        newPeriods.push({ day: d, open_time: '0000', close_time: '2359' })
+      }
+    }
+    exactPeriods.value = newPeriods
+  }
+})
+
+const DAYS_OF_WEEK = [
+  { val: 1, label: '一' },
+  { val: 2, label: '二' },
+  { val: 3, label: '三' },
+  { val: 4, label: '四' },
+  { val: 5, label: '五' },
+  { val: 6, label: '六' },
+  { val: 0, label: '日' }
+]
+
+// Initialize default periods (all 7 days)
+onMounted(() => {
+  openDays.value = [0, 1, 2, 3, 4, 5, 6]
+})
 
 async function loadTypes() {
   try {
@@ -101,6 +135,7 @@ async function fetchPlaceInfo() {
     if (info.phone) phone.value = info.phone
     if (info.address) address.value = info.address
     if (info.hours) hours.value = info.hours
+    if (info.periods && info.periods.length > 0) exactPeriods.value = info.periods
     
     if (info.is_cached) {
       toast('這筆資料是資料庫帶入的，如果要更新請隔天重新嘗試')
@@ -169,6 +204,7 @@ async function submit() {
     map_url: mapUrl.value,
     hours: hours.value,
     type: finalType,
+    periods: exactPeriods.value,
     created_by: userStore.username,
     menu_items: items.value.map((it) => ({
       name: it.name || '未命名品項',
@@ -222,7 +258,16 @@ async function submit() {
       <div class="form-group"><label>電話</label><input v-model="phone" placeholder="(03) 312-8111" /></div>
       <div class="form-group"><label>地址</label><input v-model="address" placeholder="桃園市蘆竹區..." /></div>
       <div class="form-group">
-        <label>營業時間</label>
+        <label>營業日 (打勾代表有營業)</label>
+        <div class="checkboxes">
+          <label v-for="day in DAYS_OF_WEEK" :key="day.val">
+            <input type="checkbox" :value="day.val" v-model="openDays" />
+            {{ day.label }}
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>營業時間備註</label>
         <textarea v-model="hours" rows="4" placeholder="例:&#10;星期一至五 11:00–14:00, 17:00–20:30&#10;星期六日 公休"></textarea>
       </div>
       <div class="form-group checkbox-group">

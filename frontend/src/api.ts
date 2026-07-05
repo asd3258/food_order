@@ -82,11 +82,17 @@ export interface RestaurantSummary {
   created_by: string
   is_favorite: boolean
 }
+export interface RestaurantPeriod {
+  day: number
+  open_time: string
+  close_time: string
+}
 export interface RestaurantDetail extends RestaurantSummary {
   map_url: string
   hours: string
   menu_items: MenuItem[]
   photos: Photo[]
+  periods: RestaurantPeriod[]
 }
 export interface AiMenuItemDraft {
   name: string
@@ -99,6 +105,7 @@ export interface PlaceInfo {
   phone: string
   address: string
   hours: string
+  periods: RestaurantPeriod[]
   is_cached?: boolean
 }
 export interface CategorySuggestion {
@@ -233,8 +240,8 @@ export const api = {
   // v0.12: `sort` -- "star"(★常用優先,新增,見 RestaurantListView.vue 的
   // 「預設排序」與 OrderVoteView.vue)、"created_desc"(建立時間新到舊)、
   // "name"(名稱排序);`user` 用來算 is_favorite 跟 star 排序的依據。
-  listRestaurants: (q?: string, type?: string, sort?: string, user?: string) => request<RestaurantSummary[]>(
-    `/api/restaurants${qs({ q, type, sort, user })}`),
+  listRestaurants: (q?: string, type?: string, sort?: string, user?: string, days?: string) => request<RestaurantSummary[]>(
+    `/api/restaurants${qs({ q, type, sort, user, days })}`),
   listRestaurantTypes: () => request<RestaurantType[]>('/api/parameters/restaurant-types'),
   createRestaurantType: (data: { name: string }) => request<RestaurantType>('/api/parameters/restaurant-types', { method: 'POST', body: JSON.stringify(data) }),
   updateRestaurantType: (id: number, data: { name: string }) => request<RestaurantType>(`/api/parameters/restaurant-types/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

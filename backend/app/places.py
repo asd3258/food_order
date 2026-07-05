@@ -121,7 +121,7 @@ def _place_details(place_id: str) -> dict:
         # displayName costs nothing extra (Essentials tier); nationalPhoneNumber
         # + formattedAddress = Pro tier ($17/1k) same as opening hours, so no
         # cost saved by trimming the field mask further.
-        "X-Goog-FieldMask": "displayName,nationalPhoneNumber,formattedAddress,regularOpeningHours.weekdayDescriptions",
+        "X-Goog-FieldMask": "displayName,nationalPhoneNumber,formattedAddress,regularOpeningHours.weekdayDescriptions,regularOpeningHours.periods",
     }
     # languageCode/regionCode -- same reasoning as the text search call: get
     # a Taiwan-formatted address ("...路...號" style) and 星期X 開頭的營業時間,
@@ -156,9 +156,39 @@ def fetch_place_info(map_url: str) -> dict:
         raise PlacesError(f"讀取地點詳細資料失敗:{exc}") from exc
 
     hours_lines = data.get("regularOpeningHours", {}).get("weekdayDescriptions", [])
+    periods_data = data.get("regularOpeningHours", {}).get("periods", [])
+    
+    parsed_periods = []
+    for p in periods_data:
+        open_time = p.get("open", {})
+        close_time = p.get("close", {})
+        if "day" in open_time:
+            # Format time, e.g. hour=9, minute=0 -> "0900"
+            oh = str(open_time.get("hour", 0)).zfill(2)
+            om = str(open_time.get("minute", 0)).zfill(2)
+            # if close time is missing, assume 2359
+            ch = str(close_time.get("hour", 23)).zfill(2)
+            cm = str(close_time.get("minute", 59)).zfill(2)
+            # handle cases where Google returns time directly as a string if using older API formats
+            if "time" in open_time:
+                o_str = open_time["time"]
+            else:
+                o_str = f"{oh}{om}"
+            if "time" in close_time:
+                c_str = close_time["time"]
+            else:
+                c_str = f"{ch}{cm}"
+                
+            parsed_periods.append({
+                "day": open_time["day"],
+                "open_time": o_str,
+                "close_time": c_str
+            })
+
     return {
         "name": data.get("displayName", {}).get("text", ""),
         "phone": data.get("nationalPhoneNumber", ""),
         "address": data.get("formattedAddress", ""),
         "hours": "\n".join(hours_lines),
+        "periods": parsed_periods
     }

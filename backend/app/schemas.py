@@ -84,6 +84,21 @@ class PhotoOut(BaseModel):
     sort_order: int
 
 
+# ---------- Restaurant Periods ----------
+class RestaurantPeriodIn(BaseModel):
+    day: int
+    open_time: str = "0000"
+    close_time: str = "2359"
+
+
+class RestaurantPeriodOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    day: int
+    open_time: str
+    close_time: str
+
+
 # ---------- Restaurant ----------
 class RestaurantIn(BaseModel):
     name: str
@@ -94,6 +109,7 @@ class RestaurantIn(BaseModel):
     type: str
     created_by: str = ""
     menu_items: List[MenuItemIn] = []
+    periods: List[RestaurantPeriodIn] = []
 
 
 class RestaurantUpdate(BaseModel):
@@ -104,6 +120,7 @@ class RestaurantUpdate(BaseModel):
     hours: Optional[str] = None
     type: Optional[str] = None
     menu_items: Optional[List[MenuItemIn]] = None
+    periods: Optional[List[RestaurantPeriodIn]] = None
 
 
 class RestaurantSummaryOut(BaseModel):
@@ -127,6 +144,7 @@ class RestaurantDetailOut(RestaurantSummaryOut):
     hours: str = ""
     menu_items: List[MenuItemOut] = []
     photos: List[PhotoOut] = []
+    periods: List[RestaurantPeriodOut] = []
 
 
 class PhotoUploadIn(BaseModel):
@@ -148,6 +166,7 @@ class PlaceInfoOut(BaseModel):
     phone: str = ""
     address: str = ""
     hours: str = ""
+    periods: List[RestaurantPeriodIn] = []
     is_cached: bool = False
 
 
