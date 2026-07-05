@@ -65,6 +65,12 @@ services:
       MINIO_ACCESS_KEY: food_order_minio
       MINIO_SECRET_KEY: CHANGE_ME_MINIO_PW
       MINIO_BUCKET: restaurant-photos
+      
+      # v0.16: Email sending configuration for forgot password
+      SMTP_SERVER: ${SMTP_SERVER:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
     ports:
       - "58000:8000"
     command: >
