@@ -21,10 +21,9 @@ def _rename_mike_admin_to_admin(db) -> None:
         if not already_new:
             old.name = "admin"
             old.is_admin = True
-            from passlib.context import CryptContext
-            pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+            import bcrypt
             if not old.password_hash:
-                old.password_hash = pwd_context.hash("admin")
+                old.password_hash = bcrypt.hashpw(b"admin", bcrypt.gensalt()).decode("utf-8")
             db.commit()
             print("[migrations] renamed mike_admin -> admin and set default password")
 

@@ -2,7 +2,7 @@ import datetime as dt
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
+import bcrypt
 
 from app import models, schemas
 from app.database import get_db
@@ -43,8 +43,6 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     return _to_out(u, _order_counts(db))
 
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 @router.post("", response_model=schemas.UserOut)
 def login_or_create(payload: schemas.LoginIn, db: Session = Depends(get_db)):
     """Powers both the "登入&自動建立" free-text field and the 快速登入 list
@@ -59,7 +57,7 @@ def login_or_create(payload: schemas.LoginIn, db: Session = Depends(get_db)):
     if existing:
         if existing.password_hash is None:
             if payload.password:
-                existing.password_hash = pwd_context.hash(payload.password)
+                existing.password_hash = bcrypt.hashpw(payload.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
                 db.commit()
         else:
             if not payload.password:
@@ -67,14 +65,14 @@ def login_or_create(payload: schemas.LoginIn, db: Session = Depends(get_db)):
                 
             # Check for reset code login
             if existing.reset_code and existing.reset_code_expires_at and existing.reset_code_expires_at > dt.datetime.utcnow():
-                if pwd_context.verify(payload.password, existing.reset_code):
-                    existing.password_hash = pwd_context.hash(payload.password)
+                if bcrypt.checkpw(payload.password.encode('utf-8'), existing.reset_code.encode('utf-8')):
+                    existing.password_hash = bcrypt.hashpw(payload.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
                     existing.reset_code = None
                     existing.reset_code_expires_at = None
                     db.commit()
                     return _to_out(existing, _order_counts(db))
                     
-            if not pwd_context.verify(payload.password, existing.password_hash):
+            if not bcrypt.checkpw(payload.password.encode('utf-8'), existing.password_hash.encode('utf-8')):
                 raise HTTPException(400, "密碼錯誤")
                 
         return _to_out(existing, _order_counts(db))
@@ -82,7 +80,7 @@ def login_or_create(payload: schemas.LoginIn, db: Session = Depends(get_db)):
     name = validate_user_name(name)
     u = models.User(name=name)
     if payload.password:
-        u.password_hash = pwd_context.hash(payload.password)
+        u.password_hash = bcrypt.hashpw(payload.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     db.add(u)
     db.commit()
     db.refresh(u)
@@ -155,7 +153,7 @@ def forgot_password(payload: schemas.ForgotPasswordIn, db: Session = Depends(get
         raise HTTPException(400, "帳號不存在或 Email 不符")
         
     code = f"{random.randint(0, 9999):04d}"
-    u.reset_code = pwd_context.hash(code)
+    u.reset_code = bcrypt.hashpw(code.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     u.reset_code_expires_at = dt.datetime.utcnow() + dt.timedelta(minutes=10)
     db.commit()
     
@@ -198,12 +196,12 @@ def update_password(payload: schemas.UpdatePasswordIn, db: Session = Depends(get
         raise HTTPException(400, "變更密碼前必須先設定 Email")
         
     if u.password_hash is not None:
-        if not pwd_context.verify(payload.current_password, u.password_hash):
+        if not bcrypt.checkpw(payload.current_password.encode('utf-8'), u.password_hash.encode('utf-8')):
             raise HTTPException(400, "目前密碼錯誤")
             
     if payload.current_password == payload.new_password:
         raise HTTPException(400, "新舊密碼不能相同")
         
-    u.password_hash = pwd_context.hash(payload.new_password)
+    u.password_hash = bcrypt.hashpw(payload.new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     db.commit()
     return {"message": "密碼已更新"}
