@@ -16,7 +16,7 @@ const route = useRoute()
 // form/button with a higher z-index, so nothing under it was clickable and
 // there was no way to actually finish logging in. The overlay must not
 // cover the login screen.
-const showLockout = computed(() => !userStore.isLoggedIn && route.name !== 'login')
+const showLockout = computed(() => !userStore.isLoggedIn && !['login', 'forgotPassword'].includes(route.name as string))
 
 function goLogin() {
   router.push('/login')
