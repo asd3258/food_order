@@ -157,8 +157,40 @@ def forgot_password(payload: schemas.ForgotPasswordIn, db: Session = Depends(get
     u.reset_code_expires_at = dt.datetime.utcnow() + dt.timedelta(minutes=10)
     db.commit()
     
-    # In a real app, send email here. For now, print to console.
-    print(f"\n[{name}] Forgot Password Code: {code}\n")
+    # 寄送 Email
+    import os
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    
+    smtp_server = os.getenv("SMTP_SERVER")
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_port = os.getenv("SMTP_PORT", "465")
+    
+    if smtp_server and smtp_user and smtp_password:
+        try:
+            msg = MIMEMultipart()
+            msg["From"] = f"訂餐系統 <{smtp_user}>"
+            msg["To"] = u.email
+            msg["Subject"] = "【訂餐系統】忘記密碼 - 臨時驗證碼"
+            
+            body = f"您好 {u.name}，\n\n您的臨時登入驗證碼為：{code}\n\n請在畫面上輸入此驗證碼以完成登入並重設密碼。驗證碼將於 10 分鐘後失效。\n\n此為系統自動發送，請勿直接回覆。"
+            msg.attach(MIMEText(body, "plain"))
+            
+            # 使用 SSL 進行安全連線
+            with smtplib.SMTP_SSL(smtp_server, int(smtp_port)) as server:
+                server.login(smtp_user, smtp_password)
+                server.send_message(msg)
+                
+            print(f"\n[Email Sent] Forgot Password Code sent to {u.email}\n")
+        except Exception as e:
+            print(f"\n[Email Error] Failed to send to {u.email}: {e}\n")
+            raise HTTPException(500, "寄件伺服器發生錯誤，無法發送驗證碼信件")
+    else:
+        # Fallback for local testing if no SMTP is configured
+        print(f"\n[{name}] Forgot Password Code: {code}\n")
+        
     return {"message": "已發送臨時密碼"}
 
 @router.get("/me/info")
