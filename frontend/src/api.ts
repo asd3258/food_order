@@ -206,8 +206,18 @@ export const api = {
   // Users (v0.6: shared roster / login-as picker, not a per-browser profile)
   listUsers: () => request<UserProfile[]>('/api/users'),
   getUser: (id: number) => request<UserProfile>(`/api/users/${id}`),
-  loginOrCreateUser: (name: string) => request<UserProfile>('/api/users', {
-    method: 'POST', body: JSON.stringify({ name }),
+  loginOrCreateUser: (name: string, password?: string) => request<UserProfile>('/api/users', {
+    method: 'POST', body: JSON.stringify({ name, password }),
+  }),
+  forgotPassword: (name: string, email: string) => request<{ message: string }>('/api/users/forgot-password', {
+    method: 'POST', body: JSON.stringify({ name, email }),
+  }),
+  getMyInfo: (name: string) => request<{ email: string | null; has_password: boolean }>(`/api/users/me/info${qs({ name })}`),
+  updateEmail: (name: string, email: string) => request<{ message: string }>('/api/users/me/email', {
+    method: 'PUT', body: JSON.stringify({ name, email }),
+  }),
+  updatePassword: (name: string, currentPassword: string, newPassword: string) => request<{ message: string }>('/api/users/me/password', {
+    method: 'PUT', body: JSON.stringify({ name, current_password: currentPassword, new_password: newPassword }),
   }),
   renameUser: (id: number, name: string, actingUser: string) => request<UserProfile>(
     `/api/users/${id}${qs({ acting_user: actingUser })}`, {

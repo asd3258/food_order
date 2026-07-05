@@ -24,6 +24,8 @@ const router = createRouter({
     { path: '/create-restaurant', name: 'createRestaurant', component: () => import('./views/CreateRestaurantView.vue') },
     { path: '/history', name: 'history', component: () => import('./views/HistoryView.vue') },
     { path: '/login', name: 'login', component: () => import('./views/LoginView.vue') },
+    { path: '/forgot-password', name: 'forgotPassword', component: () => import('./views/ForgotPasswordView.vue') },
+    { path: '/manage-account', name: 'manageAccount', component: () => import('./views/AccountManagementView.vue') },
     { path: '/manage-users', name: 'manageUsers', component: () => import('./views/ManageUsersView.vue') },
     { path: '/permissions', name: 'permissions', component: () => import('./views/PermissionsView.vue') },
   ],

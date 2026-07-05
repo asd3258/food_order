@@ -22,6 +22,24 @@ class UserOut(BaseModel):
     is_admin: bool = False
     ui_mode: str = "normal"  # v0.11: "normal" | "large" -- 大字模式偏好
 
+# ---------- Auth / Account Management ----------
+class LoginIn(BaseModel):
+    name: str
+    password: Optional[str] = None
+
+class ForgotPasswordIn(BaseModel):
+    name: str
+    email: str
+
+class UpdateEmailIn(BaseModel):
+    name: str
+    email: str
+
+class UpdatePasswordIn(BaseModel):
+    name: str
+    current_password: str
+    new_password: str
+
 
 class UiModeIn(BaseModel):
     ui_mode: str  # "normal" | "large"

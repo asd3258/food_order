@@ -22,6 +22,9 @@ function setUiMode(mode: string) {
     </div>
   </div>
 
+  <router-link to="/manage-account" class="card nav-card" style="text-decoration:none;color:inherit;display:flex;">
+    <span class="nc-ic">👤</span><span class="nc-name">帳號管理</span><span class="chevron">›</span>
+  </router-link>
   <router-link v-if="userStore.can('歷史訂單', 'read')" to="/history" class="card nav-card" style="text-decoration:none;color:inherit;display:flex;">
     <span class="nc-ic">🕘</span><span class="nc-name">歷史訂單</span><span class="chevron">›</span>
   </router-link>

@@ -8,6 +8,7 @@ import { validateUserName } from '../validate'
 
 const router = useRouter()
 const nameInput = ref('')
+const passwordInput = ref('')
 const quickSearch = ref('')
 const users = ref<UserProfile[]>([])
 
@@ -62,16 +63,33 @@ async function loginWithInput() {
       return
     }
   }
-  await userStore.loginAs(name)
+  await userStore.loginAs(name, passwordInput.value || undefined)
   router.push('/')
 }
 // v0.12: 快速登入清單一鍵登入很容易手滑點錯人,加一個 Yes/No 確認,選 Yes 才
 // 真的登入。
 async function quickLogin(u: UserProfile) {
+  // If the user has a password, we need to prompt for it in a real app,
+  // but since we only know if they have a password by attempting login,
+  // we'll try without password, if it fails with "請輸入密碼", we prompt.
   const ok = await confirmAction(`確定要以「${u.name}」的身分登入嗎?`)
   if (!ok) return
-  await userStore.loginAs(u.name)
-  router.push('/')
+  
+  try {
+    await userStore.loginAs(u.name)
+    router.push('/')
+  } catch (err: any) {
+    if (err.message === '請輸入密碼' || err.message === '密碼錯誤') {
+      const pwd = prompt(`請輸入「${u.name}」的密碼:`)
+      if (pwd === null) return // cancelled
+      try {
+        await userStore.loginAs(u.name, pwd)
+        router.push('/')
+      } catch {
+        // toast already shown by api.ts
+      }
+    }
+  }
 }
 </script>
 
@@ -83,9 +101,15 @@ async function quickLogin(u: UserProfile) {
 
   <div class="card">
     <div class="form-group">
-      <input v-model="nameInput" type="text" placeholder="使用者名稱" @keyup.enter="loginWithInput" />
+      <input v-model="nameInput" type="text" placeholder="使用者名稱 (必填)" />
+    </div>
+    <div class="form-group">
+      <input v-model="passwordInput" type="password" placeholder="密碼 (首次登入可輸入以設定密碼)" @keyup.enter="loginWithInput" />
     </div>
     <button class="btn btn-primary btn-full" @click="loginWithInput">登入 &amp; 自動建立</button>
+    <div style="margin-top: 12px; text-align: center; font-size: 14px;">
+      <router-link to="/forgot-password" style="color: var(--brand);">忘記密碼?</router-link>
+    </div>
   </div>
 
   <hr style="border:none;border-top:1px solid var(--border);margin:18px 0;" />

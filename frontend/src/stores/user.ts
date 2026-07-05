@@ -56,8 +56,13 @@ export const userStore = reactive({
   async restore() {
     const nameFromUrl = consumeNameFromUrl()
     if (nameFromUrl) {
-      await this.loginAs(nameFromUrl)
-      return
+      try {
+        await this.loginAs(nameFromUrl)
+        return
+      } catch {
+        // Might fail if account has a password, fallback to normal
+        console.warn('URL login failed, maybe password required')
+      }
     }
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) return
@@ -82,8 +87,8 @@ export const userStore = reactive({
   /** Logs in as `name` -- finds the existing roster entry (case-insensitive)
    * or creates a new one. Used by both the free-text login field and by
    * clicking a name in the 快速登入 list. */
-  async loginAs(name: string) {
-    const profile = await api.loginOrCreateUser(name)
+  async loginAs(name: string, password?: string) {
+    const profile = await api.loginOrCreateUser(name, password)
     this.userId = profile.id
     this.username = profile.name
     this.isAdmin = profile.is_admin

@@ -1,6 +1,8 @@
+import datetime as dt
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 
 from app import models, schemas
 from app.database import get_db
@@ -41,8 +43,10 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     return _to_out(u, _order_counts(db))
 
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 @router.post("", response_model=schemas.UserOut)
-def login_or_create(payload: schemas.UserCreateIn, db: Session = Depends(get_db)):
+def login_or_create(payload: schemas.LoginIn, db: Session = Depends(get_db)):
     """Powers both the "登入&自動建立" free-text field and the 快速登入 list
     (which just re-submits an existing name) -- idempotent: matching an
     existing name (case-insensitive) logs in as that person instead of
@@ -51,14 +55,34 @@ def login_or_create(payload: schemas.UserCreateIn, db: Session = Depends(get_db)
     if not name:
         raise HTTPException(400, "請輸入使用者名稱")
     existing = db.query(models.User).filter(func.lower(models.User.name) == name.lower()).first()
+    
     if existing:
-        # Logging in as an already-existing name skips the stricter v0.8
-        # checks below -- otherwise renaming/removing this validation later
-        # could retroactively lock people out of names created before it
-        # existed.
+        if existing.password_hash is None:
+            if payload.password:
+                existing.password_hash = pwd_context.hash(payload.password)
+                db.commit()
+        else:
+            if not payload.password:
+                raise HTTPException(400, "請輸入密碼")
+                
+            # Check for reset code login
+            if existing.reset_code and existing.reset_code_expires_at and existing.reset_code_expires_at > dt.datetime.utcnow():
+                if pwd_context.verify(payload.password, existing.reset_code):
+                    existing.password_hash = pwd_context.hash(payload.password)
+                    existing.reset_code = None
+                    existing.reset_code_expires_at = None
+                    db.commit()
+                    return _to_out(existing, _order_counts(db))
+                    
+            if not pwd_context.verify(payload.password, existing.password_hash):
+                raise HTTPException(400, "密碼錯誤")
+                
         return _to_out(existing, _order_counts(db))
+        
     name = validate_user_name(name)
     u = models.User(name=name)
+    if payload.password:
+        u.password_hash = pwd_context.hash(payload.password)
     db.add(u)
     db.commit()
     db.refresh(u)
@@ -114,3 +138,72 @@ def delete_user(user_id: int, acting_user: str, db: Session = Depends(get_db)):
     db.delete(u)
     db.commit()
     return None
+
+import random
+
+@router.post("/forgot-password", status_code=200)
+def forgot_password(payload: schemas.ForgotPasswordIn, db: Session = Depends(get_db)):
+    name = payload.name.strip()
+    email = payload.email.strip()
+    if not name or not email:
+        raise HTTPException(400, "請輸入帳號與Email")
+        
+    u = db.query(models.User).filter(func.lower(models.User.name) == name.lower()).first()
+    if not u or not u.email or u.email.lower() != email.lower():
+        # Do not leak whether user exists or email matches, but for usability we might want to tell them.
+        # Let's tell them for better UX in this internal app.
+        raise HTTPException(400, "帳號不存在或 Email 不符")
+        
+    code = f"{random.randint(0, 9999):04d}"
+    u.reset_code = pwd_context.hash(code)
+    u.reset_code_expires_at = dt.datetime.utcnow() + dt.timedelta(minutes=10)
+    db.commit()
+    
+    # In a real app, send email here. For now, print to console.
+    print(f"\n[{name}] Forgot Password Code: {code}\n")
+    return {"message": "已發送臨時密碼"}
+
+@router.get("/me/info")
+def get_my_info(name: str, db: Session = Depends(get_db)):
+    u = db.query(models.User).filter(func.lower(models.User.name) == name.lower()).first()
+    if not u:
+        raise HTTPException(404, "User not found")
+    return {
+        "email": u.email,
+        "has_password": u.password_hash is not None
+    }
+
+@router.put("/me/email")
+def update_email(payload: schemas.UpdateEmailIn, db: Session = Depends(get_db)):
+    u = db.query(models.User).filter(func.lower(models.User.name) == payload.name.lower()).first()
+    if not u:
+        raise HTTPException(404, "User not found")
+        
+    # Check if email is used by someone else
+    dup = db.query(models.User).filter(func.lower(models.User.email) == payload.email.lower(), models.User.id != u.id).first()
+    if dup:
+        raise HTTPException(400, "此 Email 已被其他帳號使用")
+        
+    u.email = payload.email.strip()
+    db.commit()
+    return {"message": "Email已更新"}
+
+@router.put("/me/password")
+def update_password(payload: schemas.UpdatePasswordIn, db: Session = Depends(get_db)):
+    u = db.query(models.User).filter(func.lower(models.User.name) == payload.name.lower()).first()
+    if not u:
+        raise HTTPException(404, "User not found")
+        
+    if not u.email:
+        raise HTTPException(400, "變更密碼前必須先設定 Email")
+        
+    if u.password_hash is not None:
+        if not pwd_context.verify(payload.current_password, u.password_hash):
+            raise HTTPException(400, "目前密碼錯誤")
+            
+    if payload.current_password == payload.new_password:
+        raise HTTPException(400, "新舊密碼不能相同")
+        
+    u.password_hash = pwd_context.hash(payload.new_password)
+    db.commit()
+    return {"message": "密碼已更新"}

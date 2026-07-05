@@ -13,22 +13,20 @@ from app.database import SessionLocal, engine
 from app.storage import MINIO_ACCESS_KEY, StorageError, upload_data_url, wait_for_minio
 
 
-def _rename_admin_mike_to_mike_admin(db) -> None:
-    """v0.8: the admin account was renamed from admin_mike to mike_admin so
-    it no longer starts with the newly-reserved "admin" prefix (regular
-    users are now blocked from picking admin*/root*/... names on
-    create/rename -- the admin account itself shouldn't collide with its
-    own rule, or look like a guessable "admin_*" convention)."""
-    old = db.query(models.User).filter(func.lower(models.User.name) == "admin_mike").first()
-    if not old:
-        return
-    already_new = db.query(models.User).filter(func.lower(models.User.name) == "mike_admin").first()
-    if already_new:
-        return
-    old.name = "mike_admin"
-    old.is_admin = True
-    db.commit()
-    print("[migrations] renamed admin_mike -> mike_admin")
+def _rename_mike_admin_to_admin(db) -> None:
+    """v0.16: Rename mike_admin to admin and set default password if needed."""
+    old = db.query(models.User).filter(func.lower(models.User.name) == "mike_admin").first()
+    if old:
+        already_new = db.query(models.User).filter(func.lower(models.User.name) == "admin").first()
+        if not already_new:
+            old.name = "admin"
+            old.is_admin = True
+            from passlib.context import CryptContext
+            pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+            if not old.password_hash:
+                old.password_hash = pwd_context.hash("admin")
+            db.commit()
+            print("[migrations] renamed mike_admin -> admin and set default password")
 
 
 def _add_column_if_missing(table: str, column: str, coltype: str, default_sql: str = "''") -> None:
@@ -192,6 +190,12 @@ def run_light_migrations() -> None:
     _drop_column_if_exists("restaurants", "sort_order")
     # v0.11: 大字模式偏好跟著使用者帳號走。
     _add_column_if_missing("users", "ui_mode", "VARCHAR", default_sql="'normal'")
+    # v0.16: Auth fields for User
+    _add_column_if_missing("users", "password_hash", "VARCHAR", default_sql="NULL")
+    _add_column_if_missing("users", "email", "VARCHAR", default_sql="NULL")
+    _add_column_if_missing("users", "reset_code", "VARCHAR", default_sql="NULL")
+    _add_column_if_missing("users", "reset_code_expires_at", "TIMESTAMP", default_sql="NULL")
+    
     # v0.12: 修正編輯餐廳存檔時,曾下過訂單的餐廳會被 order_items 外鍵擋住刪除的問題。
     _fix_order_item_menu_fk()
     # v0.13: 新增訂單鎖定功能。
@@ -212,7 +216,7 @@ def run_light_migrations() -> None:
     wait_for_minio()
     with SessionLocal() as db:
         try:
-            _rename_admin_mike_to_mike_admin(db)
+            _rename_mike_admin_to_admin(db)
             _seed_default_permissions(db)
             _seed_restaurant_types(db)
             _migrate_photos_to_object_storage(db)

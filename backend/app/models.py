@@ -42,6 +42,10 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    password_hash = Column(String, nullable=True)
+    email = Column(String, unique=True, index=True, nullable=True)
+    reset_code = Column(String, nullable=True)
+    reset_code_expires_at = Column(DateTime, nullable=True)
     is_admin = Column(Boolean, default=False)  # v0.7: gates 管理使用者 + 刪除歷史訂單
     ui_mode = Column(String, default="normal")  # v0.11: "normal" | "large" -- 大字模式偏好,跟著帳號走
     created_at = Column(DateTime, default=utcnow)
