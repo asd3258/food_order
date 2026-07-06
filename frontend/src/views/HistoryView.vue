@@ -25,6 +25,20 @@ async function togglePayment(entry: HistoryEntry, user: string) {
   load()
 }
 
+function isUserPaid(h: HistoryEntry, user: string) {
+  return h.payments.find((p) => p.user === user)?.is_paid || false
+}
+
+function getItemStats(h: HistoryEntry) {
+  const counts: Record<string, number> = {}
+  for (const l of h.lines) {
+    counts[l.item_label] = (counts[l.item_label] || 0) + l.quantity
+  }
+  return Object.entries(counts)
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count)
+}
+
 // v0.11: 「複製成文字」-- 整理成一段方便貼到 LINE/Teams 通知大家付款的純文字,
 // 不用截圖或一個個念金額。
 function buildHistoryText(h: HistoryEntry): string {
@@ -74,20 +88,39 @@ async function removeEntry(entry: HistoryEntry) {
     </div>
     <div class="hc-detail">
       <table class="stat-table">
-        <tr><th>品項</th><th>人員</th><th>數量</th><th>金額</th></tr>
+        <tr>
+          <th>品項</th>
+          <th>人員</th>
+          <th>數量</th>
+          <th>金額</th>
+          <th style="width: 50px; text-align: center;">已收款</th>
+        </tr>
         <tr v-for="(l, i) in h.lines" :key="i">
-          <td>{{ l.item_label }}</td><td>{{ l.user }}</td><td>{{ l.quantity }}</td><td>${{ l.amount }}</td>
+          <td>{{ l.item_label }}</td>
+          <td>{{ l.user }}</td>
+          <td>{{ l.quantity }}</td>
+          <td>${{ l.amount }}</td>
+          <td style="text-align: center; vertical-align: middle;">
+            <input type="checkbox" :checked="isUserPaid(h, l.user)" :disabled="h.initiator !== userStore.username" @change="togglePayment(h, l.user)" />
+          </td>
         </tr>
       </table>
-      <div class="menu-cat" style="margin-top:10px;font-size:12px;color:var(--muted);font-weight:600;">
-        收款狀態({{ h.payments.filter((p) => p.is_paid).length }}/{{ h.payments.length }} 人)
+
+      <div class="menu-cat" style="margin-top:16px;font-size:12px;color:var(--muted);font-weight:600;">
+        品項統計
       </div>
-      <label v-for="p in h.payments" :key="p.user" class="payment-row">
-        <input type="checkbox" :checked="p.is_paid" :disabled="h.initiator !== userStore.username" @change="togglePayment(h, p.user)" />
-        <span class="puser">{{ p.user }}</span>
-        <span class="pamt">${{ p.total_amount }}</span>
-      </label>
-      <button class="btn btn-secondary btn-full" style="margin-top:10px;" @click.stop="copyHistoryText(h)">📋 複製成文字</button>
+      <table class="stat-table" style="margin-top:4px;">
+        <tr>
+          <th>品項</th>
+          <th style="text-align: right; width: 60px;">總數</th>
+        </tr>
+        <tr v-for="stat in getItemStats(h)" :key="stat.label">
+          <td>{{ stat.label }}</td>
+          <td style="text-align: right;">{{ stat.count }}</td>
+        </tr>
+      </table>
+
+      <button class="btn btn-secondary btn-full" style="margin-top:16px;" @click.stop="copyHistoryText(h)">📋 複製成文字</button>
     </div>
   </div>
 </template>
