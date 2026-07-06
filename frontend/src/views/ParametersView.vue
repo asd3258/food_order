@@ -51,6 +51,7 @@ async function deleteType(id: number) {
 
 <template>
   <div class="page-header">
+    <router-link class="back" to="/more">←</router-link>
     <h1>參數維護</h1>
   </div>
 

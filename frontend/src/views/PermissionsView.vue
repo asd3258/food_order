@@ -102,6 +102,7 @@ const groupedRules = computed(() => {
 
 <template>
   <div class="page-header">
+    <router-link class="back" to="/more">←</router-link>
     <h1>權限維護</h1>
     <button class="btn btn-primary" @click="showAddModal = true">+ 新增權限規則</button>
   </div>
