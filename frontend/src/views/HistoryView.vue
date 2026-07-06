@@ -42,11 +42,15 @@ function getItemStats(h: HistoryEntry) {
 // v0.11: 「複製成文字」-- 整理成一段方便貼到 LINE/Teams 通知大家付款的純文字,
 // 不用截圖或一個個念金額。
 function buildHistoryText(h: HistoryEntry): string {
+  const itemStats = getItemStats(h)
   const lines = [
     `${h.restaurant_name} - ${h.closed_date}`,
     `共 ${h.people_count} 人,合計 $${h.total_amount}`,
     '',
     ...h.lines.map((l) => `${l.item_label} x${l.quantity} - ${l.user} - $${l.amount}`),
+    '',
+    '品項統計:',
+    ...itemStats.map((stat) => `${stat.label} x${stat.count}`),
     '',
     '收款狀態:',
     ...h.payments.map((p) => `${p.is_paid ? '✅' : '⬜'} ${p.user} $${p.total_amount}`),
