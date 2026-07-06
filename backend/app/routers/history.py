@@ -16,25 +16,26 @@ def list_history(db: Session = Depends(get_db)):
     ).order_by(models.OrderHistory.id.desc()).all()
 
 
-@router.patch("/{history_id}/payments/{user}", response_model=schemas.HistoryPaymentOut)
-def toggle_payment(history_id: int, user: str, acting_user: str, db: Session = Depends(get_db)):
-    """v0.5: only the original initiator of this history entry may toggle is_paid."""
+@router.patch("/{history_id}/lines/{line_id}/payment", response_model=schemas.HistoryLineOut)
+def toggle_payment(history_id: int, line_id: int, acting_user: str, db: Session = Depends(get_db)):
+    """v0.18: Toggle is_paid on a specific order history line."""
     history = db.query(models.OrderHistory).filter(models.OrderHistory.id == history_id).first()
     if not history:
         raise HTTPException(404, "History entry not found")
     if not check_permission(db, acting_user, "歷史訂單", "update", history.initiator):
         raise HTTPException(403, "沒有權限修改")
-    payment = db.query(models.OrderHistoryPayment).filter(
-        models.OrderHistoryPayment.order_history_id == history_id,
-        models.OrderHistoryPayment.user == user).first()
-    if not payment:
-        raise HTTPException(404, "Payment row not found")
-    payment.is_paid = not payment.is_paid
-    import datetime as dt
-    payment.paid_at = dt.datetime.utcnow() if payment.is_paid else None
+    
+    line = db.query(models.OrderHistoryLine).filter(
+        models.OrderHistoryLine.order_history_id == history_id,
+        models.OrderHistoryLine.id == line_id
+    ).first()
+    if not line:
+        raise HTTPException(404, "History line not found")
+        
+    line.is_paid = not line.is_paid
     db.commit()
-    db.refresh(payment)
-    return payment
+    db.refresh(line)
+    return line
 
 
 @router.delete("/{history_id}", status_code=204)

@@ -224,7 +224,7 @@ def close_order(order_id: int, acting_user: str, bg_tasks: BackgroundTasks, db: 
     for it in active_items:
         amount = _item_amount(it, db)
         line = models.OrderHistoryLine(order_history_id=history.id, item_label=_line_label(it, db),
-                                        user=it.user, quantity=it.quantity, amount=amount)
+                                        user=it.user, quantity=it.quantity, amount=amount, is_paid=False)
         db.add(line)
         by_user[it.user] = by_user.get(it.user, 0) + amount
 

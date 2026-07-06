@@ -203,6 +203,27 @@ def _backfill_restaurant_periods(db) -> None:
         print(f"[migrations] backfilled periods for {added} existing restaurants")
 
 
+def _migrate_history_payments_to_lines(db) -> None:
+    """v0.18: Backfill order_history_lines.is_paid from order_history_payments."""
+    # Find any lines where is_paid is still False (default after ADD COLUMN), but their payment is True
+    # To be safe, we'll just query all lines and update if needed, but doing it in a join is faster.
+    # We will do it in python for simplicity and database portability.
+    lines = db.query(models.OrderHistoryLine).all()
+    updated = 0
+    for line in lines:
+        if not line.is_paid:
+            payment = db.query(models.OrderHistoryPayment).filter(
+                models.OrderHistoryPayment.order_history_id == line.order_history_id,
+                models.OrderHistoryPayment.user == line.user
+            ).first()
+            if payment and payment.is_paid:
+                line.is_paid = True
+                updated += 1
+    if updated > 0:
+        db.commit()
+        print(f"[migrations] backfilled is_paid for {updated} order history lines")
+
+
 def run_light_migrations() -> None:
     # v0.10: 營業時間 on restaurants, 分類 on menu_items.
     _add_column_if_missing("restaurants", "hours", "TEXT")
@@ -243,6 +264,9 @@ def run_light_migrations() -> None:
     # v0.17: place_cache periods
     _add_column_if_missing("place_cache", "periods", "JSON", default_sql="'[]'")
 
+    # v0.18: order_history_lines.is_paid
+    _add_column_if_missing("order_history_lines", "is_paid", "BOOLEAN", default_sql="FALSE")
+
     _migrate_extra_price_to_float()
 
     # v0.11: make sure the MinIO bucket exists/is public-read before the
@@ -254,6 +278,7 @@ def run_light_migrations() -> None:
             _seed_default_permissions(db)
             _seed_restaurant_types(db)
             _backfill_restaurant_periods(db)
+            _migrate_history_payments_to_lines(db)
             _migrate_photos_to_object_storage(db)
         finally:
             db.close()

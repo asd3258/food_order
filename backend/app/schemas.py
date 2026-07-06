@@ -266,10 +266,12 @@ class VoteBatchOut(BaseModel):
 # ---------- History / Payments ----------
 class HistoryLineOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+    id: int
     item_label: str
     user: str
     quantity: int
     amount: int
+    is_paid: bool
 
 
 class HistoryPaymentOut(BaseModel):

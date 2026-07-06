@@ -19,14 +19,21 @@ function toggle(id: number) {
   else expanded.add(id)
 }
 
-async function togglePayment(entry: HistoryEntry, user: string) {
+async function togglePayment(entry: HistoryEntry, lineId: number) {
   if (entry.initiator !== userStore.username && !userStore.isAdmin) return
-  await api.togglePayment(entry.id, user, userStore.username)
+  await api.togglePayment(entry.id, lineId, userStore.username)
   load()
 }
 
-function isUserPaid(h: HistoryEntry, user: string) {
-  return h.payments.find((p) => p.user === user)?.is_paid || false
+function sortedLines(lines: HistoryLine[]) {
+  return [...lines].sort((a, b) => {
+    return (
+      a.user.localeCompare(b.user) ||
+      a.item_label.localeCompare(b.item_label) ||
+      b.quantity - a.quantity ||
+      b.amount - a.amount
+    )
+  })
 }
 
 function getItemStats(h: HistoryEntry) {
@@ -52,13 +59,13 @@ function buildHistoryText(h: HistoryEntry): string {
     `${h.restaurant_name} - ${h.closed_date}`,
     `共 ${h.people_count} 人,合計 $${h.total_amount}`,
     '',
-    ...h.lines.map((l) => `${l.item_label} x${l.quantity} - ${l.user} - $${l.amount}`),
+    ...sortedLines(h.lines).map((l) => `${l.item_label} x${l.quantity} - ${l.user} - $${l.amount}`),
     '',
     `品項統計(總共${totalCount}個):`,
     ...itemStats.map((stat) => `${stat.label} x${stat.count}`),
     '',
-    '收款狀態:',
-    ...h.payments.map((p) => `${p.is_paid ? '✅' : '⬜'} ${p.user} $${p.total_amount}`),
+    '收款狀態(依品項):',
+    ...sortedLines(h.lines).map((l) => `${l.is_paid ? '✅' : '⬜'} ${l.user} - ${l.item_label} x${l.quantity} ($${l.amount})`),
   ]
   return lines.join('\n')
 }
@@ -89,7 +96,7 @@ async function removeEntry(entry: HistoryEntry) {
         <div class="name" style="font-weight:600;font-size:14px;">{{ h.restaurant_name }}</div>
         <div class="sub" style="font-size:12px;color:var(--muted);">
           {{ h.closed_date }} · 發起者:{{ h.initiator }} · {{ h.people_count }}人 · 共 ${{ h.total_amount }} ·
-          已收款 {{ h.payments.filter((p) => p.is_paid).length }}/{{ h.payments.length }}
+          已收款 {{ h.lines.filter((l) => l.is_paid).length }}/{{ h.lines.length }} 品項
         </div>
       </div>
       <span v-if="userStore.isAdmin" style="color:var(--danger);font-size:12px;cursor:pointer;margin-right:8px;align-self:center;" @click.stop="removeEntry(h)">刪除</span>
@@ -104,13 +111,13 @@ async function removeEntry(entry: HistoryEntry) {
           <th>金額</th>
           <th style="width: 50px; text-align: center;">已收款</th>
         </tr>
-        <tr v-for="(l, i) in h.lines" :key="i">
+        <tr v-for="l in sortedLines(h.lines)" :key="l.id">
           <td>{{ l.item_label }}</td>
           <td>{{ l.user }}</td>
           <td>{{ l.quantity }}</td>
           <td>${{ l.amount }}</td>
           <td style="text-align: center; vertical-align: middle;">
-            <input type="checkbox" :checked="isUserPaid(h, l.user)" :disabled="h.initiator !== userStore.username && !userStore.isAdmin" @change="togglePayment(h, l.user)" />
+            <input type="checkbox" :checked="l.is_paid" :disabled="h.initiator !== userStore.username && !userStore.isAdmin" @change="togglePayment(h, l.id)" />
           </td>
         </tr>
       </table>

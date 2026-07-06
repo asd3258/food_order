@@ -241,6 +241,7 @@ class OrderHistoryLine(Base):
     user = Column(String, nullable=False)
     quantity = Column(Integer, default=1)
     amount = Column(Integer, default=0)
+    is_paid = Column(Boolean, default=False)
 
     history = relationship("OrderHistory", back_populates="lines")
 

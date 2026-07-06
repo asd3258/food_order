@@ -154,10 +154,12 @@ export interface VoteBatchOut {
   my_locked: boolean
 }
 export interface HistoryLine {
+  id: number
   item_label: string
   user: string
   quantity: number
   amount: number
+  is_paid: boolean
 }
 export interface HistoryPayment {
   user: string
@@ -320,9 +322,8 @@ export const api = {
 
   // History
   listHistory: () => request<HistoryEntry[]>('/api/orders/history'),
-  togglePayment: (historyId: number, user: string, actingUser: string) => request<HistoryPayment>(
-    `/api/orders/history/${historyId}/payments/${encodeURIComponent(user)}${qs({ acting_user: actingUser })}`,
-    { method: 'PATCH' }),
+  togglePayment: (historyId: number, lineId: number, actingUser: string) => request<HistoryLine>(
+    `/api/orders/history/${historyId}/lines/${lineId}/payment${qs({ acting_user: actingUser })}`, { method: 'PATCH' }),
   deleteHistory: (historyId: number, actingUser: string) => request<void>(
     `/api/orders/history/${historyId}${qs({ acting_user: actingUser })}`, { method: 'DELETE' }),
 
