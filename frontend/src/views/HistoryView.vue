@@ -39,17 +39,22 @@ function getItemStats(h: HistoryEntry) {
     .sort((a, b) => b.count - a.count)
 }
 
+function getTotalItemCount(h: HistoryEntry) {
+  return h.lines.reduce((sum, l) => sum + l.quantity, 0)
+}
+
 // v0.11: 「複製成文字」-- 整理成一段方便貼到 LINE/Teams 通知大家付款的純文字,
 // 不用截圖或一個個念金額。
 function buildHistoryText(h: HistoryEntry): string {
   const itemStats = getItemStats(h)
+  const totalCount = getTotalItemCount(h)
   const lines = [
     `${h.restaurant_name} - ${h.closed_date}`,
     `共 ${h.people_count} 人,合計 $${h.total_amount}`,
     '',
     ...h.lines.map((l) => `${l.item_label} x${l.quantity} - ${l.user} - $${l.amount}`),
     '',
-    '品項統計:',
+    `品項統計(總共${totalCount}個):`,
     ...itemStats.map((stat) => `${stat.label} x${stat.count}`),
     '',
     '收款狀態:',
@@ -111,7 +116,7 @@ async function removeEntry(entry: HistoryEntry) {
       </table>
 
       <div class="menu-cat" style="margin-top:16px;font-size:12px;color:var(--muted);font-weight:600;">
-        品項統計
+        品項統計(總共{{ getTotalItemCount(h) }}個)
       </div>
       <table class="stat-table" style="margin-top:4px;">
         <tr>
@@ -121,6 +126,10 @@ async function removeEntry(entry: HistoryEntry) {
         <tr v-for="stat in getItemStats(h)" :key="stat.label">
           <td>{{ stat.label }}</td>
           <td style="text-align: right;">{{ stat.count }}</td>
+        </tr>
+        <tr style="font-weight: 600; background-color: var(--bg); border-top: 1px solid var(--border);">
+          <td>總共</td>
+          <td style="text-align: right;">{{ getTotalItemCount(h) }}</td>
         </tr>
       </table>
 
