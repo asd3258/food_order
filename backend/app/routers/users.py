@@ -13,10 +13,10 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 
 
 def _order_counts(db: Session) -> dict:
-    """How many OrderHistoryLine rows mention each name -- used to sort the
+    """How many OrderHistory rows mention each name -- used to sort the
     快速登入 (quick login) list so the most frequent orderers show up first."""
     rows = db.query(
-        models.OrderHistoryLine.user, func.count(models.OrderHistoryLine.id)
+        models.OrderHistoryLine.user, func.count(models.OrderHistoryLine.order_history_id.distinct())
     ).group_by(models.OrderHistoryLine.user).all()
     return {name: count for name, count in rows}
 
