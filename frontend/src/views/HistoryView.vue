@@ -20,7 +20,7 @@ function toggle(id: number) {
 }
 
 async function togglePayment(entry: HistoryEntry, user: string) {
-  if (entry.initiator !== userStore.username) return
+  if (entry.initiator !== userStore.username && !userStore.isAdmin) return
   await api.togglePayment(entry.id, user, userStore.username)
   load()
 }
@@ -110,7 +110,7 @@ async function removeEntry(entry: HistoryEntry) {
           <td>{{ l.quantity }}</td>
           <td>${{ l.amount }}</td>
           <td style="text-align: center; vertical-align: middle;">
-            <input type="checkbox" :checked="isUserPaid(h, l.user)" :disabled="h.initiator !== userStore.username" @change="togglePayment(h, l.user)" />
+            <input type="checkbox" :checked="isUserPaid(h, l.user)" :disabled="h.initiator !== userStore.username && !userStore.isAdmin" @change="togglePayment(h, l.user)" />
           </td>
         </tr>
       </table>
