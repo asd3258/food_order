@@ -241,6 +241,32 @@ function doShare() {
   const rname = restaurant.value?.name || '訂單'
   shareLink(`訂單${orderId} - ${rname}`, `一起訂 ${rname} 吧,點連結進去選你要的品項:`, currentUrl())
 }
+
+const sortedStats = computed(() => {
+  return [...stats.value].sort((a, b) => {
+    return (
+      a.user.localeCompare(b.user) ||
+      a.label.localeCompare(b.label) ||
+      b.quantity - a.quantity ||
+      b.amount - a.amount
+    )
+  })
+})
+
+function getItemStats() {
+  const counts: Record<string, number> = {}
+  for (const s of stats.value) {
+    if (s.is_deleted) continue
+    counts[s.label] = (counts[s.label] || 0) + s.quantity
+  }
+  return Object.entries(counts)
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count)
+}
+
+function getTotalItemCount() {
+  return stats.value.filter(s => !s.is_deleted).reduce((sum, s) => sum + s.quantity, 0)
+}
 </script>
 
 <template>
@@ -309,8 +335,8 @@ function doShare() {
       <div class="card">
         <table class="stat-table">
           <tr><th>品項 / 選項</th><th>人員</th><th>數量</th><th>金額</th></tr>
-          <tr v-if="!stats.length"><td colspan="4" style="color:var(--muted);">尚無資料</td></tr>
-          <tr v-for="s in stats" :key="s.item_id" :style="s.is_deleted ? 'opacity:.5;text-decoration:line-through;' : ''">
+          <tr v-if="!sortedStats.length"><td colspan="4" style="color:var(--muted);">尚無資料</td></tr>
+          <tr v-for="s in sortedStats" :key="s.item_id" :style="s.is_deleted ? 'opacity:.5;text-decoration:line-through;' : ''">
             <td>{{ s.label }}</td>
             <td>{{ s.user }}</td>
             <td>{{ s.quantity }}</td>
@@ -318,6 +344,24 @@ function doShare() {
               ${{ s.amount }}
               <span v-if="!s.is_deleted && s.user !== userStore.username && isInitiator" class="rm" @click="softDelete(s.item_id)">刪除</span>
             </td>
+          </tr>
+        </table>
+        
+        <div class="menu-cat" style="margin-top:16px;font-size:12px;color:var(--muted);font-weight:600;">
+          品項統計(總共{{ getTotalItemCount() }}個)
+        </div>
+        <table class="stat-table" style="margin-top:4px;">
+          <tr>
+            <th>品項</th>
+            <th style="text-align: right; width: 60px;">總數</th>
+          </tr>
+          <tr v-for="stat in getItemStats()" :key="stat.label">
+            <td>{{ stat.label }}</td>
+            <td style="text-align: right;">{{ stat.count }}</td>
+          </tr>
+          <tr style="font-weight: 600; background-color: var(--bg); border-top: 1px solid var(--border);">
+            <td>總共</td>
+            <td style="text-align: right;">{{ getTotalItemCount() }}</td>
           </tr>
         </table>
       </div>
