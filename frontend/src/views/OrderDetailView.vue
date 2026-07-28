@@ -267,6 +267,53 @@ function getItemStats() {
 function getTotalItemCount() {
   return stats.value.filter(s => !s.is_deleted).reduce((sum, s) => sum + s.quantity, 0)
 }
+
+type LabelPart = { text: string; temperatureTone: 'warm' | 'hot' | null }
+
+function temperatureOptionNames(stat: StatRow): string[] {
+  const orderItem = order.value?.items.find((item) => item.id === stat.item_id)
+  if (!orderItem?.menu_item_id) return []
+
+  const menuItem = restaurant.value?.menu_items.find((item) => item.id === orderItem.menu_item_id)
+  if (!menuItem) return []
+
+  return menuItem.options
+    .filter((option) => option.option_group.trim() === '溫度')
+    .filter((option) => orderItem.selected_options.includes(option.option_name))
+    .map((option) => option.option_name)
+    .filter((name) => name.includes('溫') || name.includes('熱'))
+    .sort((a, b) => b.length - a.length)
+}
+
+function labelParts(stat: StatRow): LabelPart[] {
+  const optionNames = temperatureOptionNames(stat)
+  if (!optionNames.length) return [{ text: stat.label, temperatureTone: null }]
+
+  const parts: LabelPart[] = []
+  let cursor = 0
+  while (cursor < stat.label.length) {
+    let matchIndex = -1
+    let matchName = ''
+    for (const name of optionNames) {
+      const index = stat.label.indexOf(name, cursor)
+      if (index !== -1 && (matchIndex === -1 || index < matchIndex)) {
+        matchIndex = index
+        matchName = name
+      }
+    }
+    if (matchIndex === -1) {
+      parts.push({ text: stat.label.slice(cursor), temperatureTone: null })
+      break
+    }
+    if (matchIndex > cursor) parts.push({ text: stat.label.slice(cursor, matchIndex), temperatureTone: null })
+    parts.push({
+      text: matchName,
+      temperatureTone: matchName.includes('熱') ? 'hot' : 'warm',
+    })
+    cursor = matchIndex + matchName.length
+  }
+  return parts
+}
 </script>
 
 <template>
@@ -337,7 +384,11 @@ function getTotalItemCount() {
           <tr><th>品項 / 選項</th><th>人員</th><th>數量</th><th>金額</th></tr>
           <tr v-if="!sortedStats.length"><td colspan="4" style="color:var(--muted);">尚無資料</td></tr>
           <tr v-for="s in sortedStats" :key="s.item_id" :style="s.is_deleted ? 'opacity:.5;text-decoration:line-through;' : ''">
-            <td>{{ s.label }}</td>
+            <td>
+              <template v-for="(part, index) in labelParts(s)" :key="index">
+                <span :class="part.temperatureTone ? `temperature-${part.temperatureTone}` : undefined">{{ part.text }}</span>
+              </template>
+            </td>
             <td>{{ s.user }}</td>
             <td>{{ s.quantity }}</td>
             <td>

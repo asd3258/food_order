@@ -112,6 +112,8 @@ nav.bottomnav a.active{color:var(--brand);font-weight:600;}
 .stat-table th,.stat-table td{text-align:left;padding:6px 4px;border-bottom:1px solid var(--border);}
 .stat-table th{color:var(--muted);font-weight:600;}
 .stat-table .rm{color:var(--danger);cursor:pointer;font-size:11px;margin-left:6px;}
+.stat-table .temperature-warm{color:#f97316;font-weight:600;}
+.stat-table .temperature-hot{color:#dc2626;font-weight:600;}
 .checkbox-item{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:8px;}
 .checkbox-item input{width:18px;height:18px;}
 .checkbox-item .cname{font-size:14px;font-weight:600;flex:1;}
