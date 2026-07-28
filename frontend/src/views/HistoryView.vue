@@ -8,6 +8,7 @@ import { copyText } from '../share'
 
 const entries = ref<HistoryEntry[]>([])
 const expanded = reactive<Set<number>>(new Set())
+const updatingLineIds = reactive<Set<number>>(new Set())
 
 async function load() {
   entries.value = await api.listHistory()
@@ -20,9 +21,21 @@ function toggle(id: number) {
 }
 
 async function togglePayment(entry: HistoryEntry, lineId: number) {
-  if (entry.initiator !== userStore.username && !userStore.isAdmin) return
-  await api.togglePayment(entry.id, lineId, userStore.username)
-  load()
+  if (
+    (entry.initiator !== userStore.username && !userStore.isAdmin) ||
+    updatingLineIds.has(lineId)
+  ) return
+
+  updatingLineIds.add(lineId)
+  try {
+    // Update only the exact history line returned by the API. Reloading the
+    // whole list here can let an older response overwrite a newer toggle.
+    const updatedLine = await api.togglePayment(entry.id, lineId, userStore.username)
+    const line = entry.lines.find((candidate) => candidate.id === updatedLine.id)
+    if (line) Object.assign(line, updatedLine)
+  } finally {
+    updatingLineIds.delete(lineId)
+  }
 }
 
 function sortedLines(lines: HistoryLine[]) {
@@ -117,7 +130,12 @@ async function removeEntry(entry: HistoryEntry) {
           <td>{{ l.quantity }}</td>
           <td>${{ l.amount }}</td>
           <td style="text-align: center; vertical-align: middle;">
-            <input type="checkbox" :checked="l.is_paid" :disabled="h.initiator !== userStore.username && !userStore.isAdmin" @change="togglePayment(h, l.id)" />
+            <input
+              type="checkbox"
+              :checked="l.is_paid"
+              :disabled="(h.initiator !== userStore.username && !userStore.isAdmin) || updatingLineIds.has(l.id)"
+              @change="togglePayment(h, l.id)"
+            />
           </td>
         </tr>
       </table>
