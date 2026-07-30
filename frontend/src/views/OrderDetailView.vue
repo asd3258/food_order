@@ -424,7 +424,7 @@ function labelParts(stat: StatRow): LabelPart[] {
     </div>
 
     <div class="overlay" :class="{ active: sheetOpen }" @click.self="closeSheet">
-      <div class="sheet" v-if="sheetItem">
+      <div class="sheet order-item-sheet" v-if="sheetItem">
         <h3>{{ sheetItem.name }}</h3>
         <div class="price">${{ sheetItem.price }} 起</div>
 
@@ -450,7 +450,7 @@ function labelParts(stat: StatRow): LabelPart[] {
         </div>
 
         <div class="qty-row">
-          <span style="font-size:13px;color:var(--muted);">數量</span>
+          <span class="qty-label">數量</span>
           <div class="qty-ctrl">
             <button @click="sheetQty = Math.max(1, sheetQty - 1)">−</button>
             <span>{{ sheetQty }}</span>

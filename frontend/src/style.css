@@ -147,6 +147,15 @@ select.time-select,input.time-select{padding:8px 9px;border:1px solid var(--bord
 .qty-ctrl{display:flex;align-items:center;gap:14px;}
 .qty-ctrl button{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:#f5f5f5;font-size:17px;}
 .sheet-actions{display:flex;gap:10px;margin-top:18px;}
+.order-item-sheet{font-size:16px;}
+.order-item-sheet h3{font-size:20px;}
+.order-item-sheet .price{font-size:16px;}
+.order-item-sheet .empty{font-size:16px;}
+.order-item-sheet .opt-group-title{font-size:15px;}
+.order-item-sheet .opt-choice{font-size:16px;}
+.order-item-sheet .qty-label{font-size:16px;color:var(--muted);}
+.order-item-sheet .qty-ctrl button{font-size:20px;}
+.order-item-sheet .sheet-actions .btn{font-size:16px;}
 #confirmOverlay .confirm-box{border-radius:16px;max-width:320px;text-align:center;}
 #confirmMessage{font-size:14px;margin:4px 0 18px;line-height:1.6;white-space:pre-line;text-align:left;}
 .form-group{margin-bottom:12px;}
