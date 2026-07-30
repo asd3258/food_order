@@ -55,6 +55,7 @@ const canModify = computed(() => {
 })
 const myLines = computed(() => stats.value.filter((s) => s.user === userStore.username && !s.is_deleted))
 const myTotal = computed(() => myLines.value.reduce((sum, l) => sum + l.amount, 0))
+const allTotal = computed(() => stats.value.filter((s) => !s.is_deleted).reduce((sum, s) => sum + s.amount, 0))
 const attemptedSubmit = ref(false)
 const isDeadlineInvalid = computed(() => {
   if (order.value?.is_locked) return false
@@ -395,6 +396,10 @@ function labelParts(stat: StatRow): LabelPart[] {
               ${{ s.amount }}
               <span v-if="!s.is_deleted && s.user !== userStore.username && isInitiator" class="rm" @click="softDelete(s.item_id)">刪除</span>
             </td>
+          </tr>
+          <tr style="font-weight: 600; background-color: var(--bg); border-top: 1px solid var(--border);">
+            <td colspan="3">總金額</td>
+            <td>${{ allTotal }}</td>
           </tr>
         </table>
         
