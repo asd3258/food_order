@@ -31,7 +31,7 @@ function logout() {
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <div class="title">訂餐統計</div>
+      <div class="title">蘆竹訂餐團</div>
       <div class="login-bar">
         <template v-if="userStore.isLoggedIn">
           <span class="login-status">使用者:{{ userStore.username }}</span>

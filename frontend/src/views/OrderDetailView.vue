@@ -325,12 +325,13 @@ function labelParts(stat: StatRow): LabelPart[] {
 
   <template v-if="order && restaurant">
     <div class="btn-row">
-      <button class="btn btn-secondary" @click="doCopyLink">🔗 複製連結</button>
-      <button v-if="shareSupported" class="btn btn-secondary" @click="doShare">📤 分享</button>
+      <button class="btn btn-secondary" @click="copyMapLink(restaurant)">📋 複製地圖連結</button>
+      <a class="btn btn-secondary" :href="mapUrl(restaurant)" target="_blank">📍 在 Google Maps 開啟</a>
     </div>
 
     <div v-if="!isInitiator" class="deadline-inline">
       <span>截止時間</span><strong>{{ order.deadline_at ? formatDeadline(order.deadline_at) : '(未設定)' }}</strong>
+      <button class="btn btn-secondary" @click="doCopyLink">🔗 複製訂單連結</button>
     </div>
     <div v-else-if="editDeadline" class="deadline-inline">
       <span>截止時間</span>
@@ -343,6 +344,11 @@ function labelParts(stat: StatRow): LabelPart[] {
         <option v-for="m in MINUTES" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
       </select>
       <button class="btn btn-secondary" style="flex:none;padding:7px 12px;" :disabled="order.is_locked" @click="updateDeadline">更新</button>
+      <button class="btn btn-secondary" @click="doCopyLink">🔗 複製訂單連結</button>
+    </div>
+
+    <div v-if="shareSupported" class="btn-row">
+      <button class="btn btn-secondary" @click="doShare">📤 分享</button>
     </div>
 
     <div v-if="isInitiator" class="btn-row">
@@ -422,11 +428,6 @@ function labelParts(stat: StatRow): LabelPart[] {
         </table>
       </div>
     </section>
-
-    <div class="btn-row">
-      <button class="btn btn-secondary" @click="copyMapLink(restaurant)">📋 複製地圖連結</button>
-      <a class="btn btn-secondary" :href="mapUrl(restaurant)" target="_blank">📍 在 Google Maps 開啟</a>
-    </div>
 
     <div class="overlay" :class="{ active: sheetOpen }" @click.self="closeSheet">
       <div class="sheet order-item-sheet" v-if="sheetItem">

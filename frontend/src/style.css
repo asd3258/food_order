@@ -90,7 +90,7 @@ button.btn-primary:disabled{background:#c9c8e6;cursor:not-allowed;}
 button.btn-full{width:100%;}
 .btn-row{display:flex;gap:10px;margin-bottom:14px;}
 .btn-row button,.btn-row a.btn{flex:1;}
-a.btn{display:block;text-align:center;text-decoration:none;}
+a.btn{display:flex;align-items:center;justify-content:center;text-align:center;text-decoration:none;}
 nav.bottomnav{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border);display:flex;}
 nav.bottomnav a{flex:1;background:none;border:none;padding:10px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);font-size:11px;text-decoration:none;}
 nav.bottomnav a .ic{font-size:19px;}

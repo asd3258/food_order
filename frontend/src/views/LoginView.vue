@@ -104,7 +104,7 @@ async function quickLogin(u: UserProfile) {
       <input v-model="nameInput" type="text" placeholder="使用者名稱 (必填)" />
     </div>
     <div class="form-group">
-      <input v-model="passwordInput" type="password" placeholder="密碼 (首次登入可輸入以設定密碼)" @keyup.enter="loginWithInput" />
+      <input v-model="passwordInput" type="password" placeholder="密碼 (選填.預設空值可不填寫密碼)" @keyup.enter="loginWithInput" />
     </div>
     <button class="btn btn-primary btn-full" @click="loginWithInput">登入 &amp; 自動建立</button>
     <div style="margin-top: 12px; text-align: center; font-size: 14px;">
