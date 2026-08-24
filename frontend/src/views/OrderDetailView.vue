@@ -53,6 +53,46 @@ const canModify = computed(() => {
   if (!order.value.is_locked) return true
   return isInitiator.value
 })
+// v0.19: 「已售完」標記 -- 只在訂單還開著時能改,權限跟鎖單/結單一樣是
+// 訂單建立者 & admin(後端用 check_permission(訂單, delete) 再驗一次)。
+const canMarkSoldOut = computed(() => !!order.value && order.value.status === 'open' && isInitiator.value)
+const soldOutItemIds = computed(
+  () => new Set((order.value?.sold_outs || []).filter((s) => !s.option_name).map((s) => s.menu_item_id)),
+)
+const soldOutOptionKeys = computed(
+  () => new Set(
+    (order.value?.sold_outs || [])
+      .filter((s) => s.option_name)
+      .map((s) => `${s.menu_item_id}|${s.option_group}|${s.option_name}`),
+  ),
+)
+function isItemSoldOut(item: MenuItem): boolean {
+  return soldOutItemIds.value.has(item.id)
+}
+function isOptionSoldOut(item: MenuItem, group: string, name: string): boolean {
+  return soldOutOptionKeys.value.has(`${item.id}|${group}|${name}`)
+}
+async function toggleItemSoldOut(item: MenuItem) {
+  if (!order.value) return
+  const marks = await api.toggleSoldOut(
+    orderId,
+    { menu_item_id: item.id, sold_out: !isItemSoldOut(item) },
+    userStore.username,
+  )
+  order.value.sold_outs = marks
+  toast(isItemSoldOut(item) ? `已標記「${item.name}」售完` : `已恢復供應「${item.name}」`)
+}
+async function toggleOptionSoldOut(item: MenuItem, group: string, name: string) {
+  if (!order.value) return
+  const marks = await api.toggleSoldOut(
+    orderId,
+    { menu_item_id: item.id, option_group: group, option_name: name, sold_out: !isOptionSoldOut(item, group, name) },
+    userStore.username,
+  )
+  order.value.sold_outs = marks
+  toast(isOptionSoldOut(item, group, name) ? `已標記「${name}」售完` : `已恢復供應「${name}」`)
+}
+
 const myLines = computed(() => stats.value.filter((s) => s.user === userStore.username && !s.is_deleted))
 const myTotal = computed(() => myLines.value.reduce((sum, l) => sum + l.amount, 0))
 const allTotal = computed(() => stats.value.filter((s) => !s.is_deleted).reduce((sum, s) => sum + s.amount, 0))
@@ -127,6 +167,10 @@ const sheetQty = ref(1)
 
 function openItemSheet(item: MenuItem) {
   if (!requireLogin()) return
+  if (isItemSoldOut(item)) {
+    toast(`「${item.name}」已售完`)
+    return
+  }
   if (!canModify.value) {
     toast('此訂單已鎖單，無法點餐')
     return
@@ -135,8 +179,10 @@ function openItemSheet(item: MenuItem) {
   sheetChoices.value = {}
   for (const group of Array.from(new Set(item.options.map((o) => o.option_group)))) {
     const groupOptions = item.options.filter((o) => o.option_group === group)
-    if (groupOptions[0]?.option_type === 'radio' && groupOptions.length) {
-      sheetChoices.value[group] = [groupOptions[0].option_name]
+    // 單選群組的預設值要跳過已售完的選項,免得一打開就選到不能點的東西。
+    const firstAvailable = groupOptions.find((o) => !isOptionSoldOut(item, group, o.option_name))
+    if (groupOptions[0]?.option_type === 'radio' && firstAvailable) {
+      sheetChoices.value[group] = [firstAvailable.option_name]
     } else {
       sheetChoices.value[group] = []
     }
@@ -166,7 +212,22 @@ function onCheckboxToggle(group: string, name: string, checked: boolean) {
 }
 async function addToOrder() {
   if (!sheetItem.value) return
+  const item = sheetItem.value
+  if (isItemSoldOut(item)) {
+    await alertWarning(`「${item.name}」已售完`)
+    closeSheet()
+    return
+  }
   const selected = Object.values(sheetChoices.value).flat()
+  // 彈層開著的時候別人可能剛把某個選項標成售完(WebSocket 會即時更新反灰狀態),
+  // 送出前再擋一次;後端也會再驗一次。
+  const soldOutPick = Object.entries(sheetChoices.value)
+    .flatMap(([group, names]) => names.map((name) => ({ group, name })))
+    .find(({ group, name }) => isOptionSoldOut(item, group, name))
+  if (soldOutPick) {
+    await alertWarning(`選項「${soldOutPick.name}」已售完,請改選其他選項`)
+    return
+  }
   await api.addOrderItem(orderId, {
     user: userStore.username,
     menu_item_id: sheetItem.value.id,
@@ -360,12 +421,30 @@ function labelParts(stat: StatRow): LabelPart[] {
 
     <div v-for="grp in groupedMenu" :key="grp.category">
       <div class="menu-cat" style="margin-top:14px;font-size:12px;color:var(--muted);font-weight:600;">{{ grp.category }}</div>
-      <div v-for="m in grp.items" :key="m.id" class="menu-item" @click="openItemSheet(m)">
+      <div
+        v-for="m in grp.items"
+        :key="m.id"
+        class="menu-item"
+        :class="{ 'is-sold-out': isItemSoldOut(m) }"
+        @click="openItemSheet(m)"
+      >
         <div>
-          <div class="mi-name">{{ m.name }}</div>
+          <div class="mi-name">
+            <span class="mi-label">{{ m.name }}</span>
+            <span v-if="isItemSoldOut(m)" class="sold-out-badge">已售完</span>
+          </div>
           <div class="mi-price">${{ m.price }}</div>
         </div>
-        <div class="plus-badge" v-if="canModify">+</div>
+        <div class="mi-actions">
+          <button
+            v-if="canMarkSoldOut"
+            type="button"
+            class="soldout-btn"
+            :class="{ active: isItemSoldOut(m) }"
+            @click.stop="toggleItemSoldOut(m)"
+          >{{ isItemSoldOut(m) ? '恢復供應' : '標記售完' }}</button>
+          <div class="plus-badge" v-if="canModify && !isItemSoldOut(m)">+</div>
+        </div>
       </div>
     </div>
 
@@ -437,21 +516,36 @@ function labelParts(stat: StatRow): LabelPart[] {
         <div v-if="!sheetItem.options.length" class="empty" style="text-align:left;padding:4px 0;">此品項無客製選項</div>
         <div v-for="g in groupsOf(sheetItem)" :key="g.group">
           <div class="opt-group-title">{{ g.group }}{{ g.type === 'radio' ? '(單選)' : '(可多選)' }}</div>
-          <label v-for="c in g.choices" :key="c.option_name" class="opt-choice">
+          <label
+            v-for="c in g.choices"
+            :key="c.option_name"
+            class="opt-choice"
+            :class="{ 'is-sold-out': isOptionSoldOut(sheetItem, g.group, c.option_name) }"
+          >
             <input
               v-if="g.type === 'radio'"
               type="radio"
               :name="g.group"
+              :disabled="isOptionSoldOut(sheetItem, g.group, c.option_name)"
               :checked="sheetChoices[g.group]?.[0] === c.option_name"
               @change="onRadioPick(g.group, c.option_name)"
             />
             <input
               v-else
               type="checkbox"
+              :disabled="isOptionSoldOut(sheetItem, g.group, c.option_name)"
               :checked="sheetChoices[g.group]?.includes(c.option_name)"
               @change="onCheckboxToggle(g.group, c.option_name, ($event.target as HTMLInputElement).checked)"
             />
-            {{ c.option_name }}<template v-if="c.extra_price"> ({{ c.extra_price > 0 ? '+$' + c.extra_price : '-$' + (-c.extra_price) }})</template>
+            <span class="opt-label">{{ c.option_name }}<template v-if="c.extra_price"> ({{ c.extra_price > 0 ? '+$' + c.extra_price : '-$' + (-c.extra_price) }})</template></span>
+            <span v-if="isOptionSoldOut(sheetItem, g.group, c.option_name)" class="sold-out-badge">已售完</span>
+            <button
+              v-if="canMarkSoldOut"
+              type="button"
+              class="soldout-btn"
+              :class="{ active: isOptionSoldOut(sheetItem, g.group, c.option_name) }"
+              @click.prevent.stop="toggleOptionSoldOut(sheetItem, g.group, c.option_name)"
+            >{{ isOptionSoldOut(sheetItem, g.group, c.option_name) ? '恢復供應' : '標記售完' }}</button>
           </label>
         </div>
 

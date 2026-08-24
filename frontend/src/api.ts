@@ -122,6 +122,14 @@ export interface OrderItemRow {
   note: string
   is_deleted: boolean
 }
+// v0.19: 訂單期間的「已售完」標記。option_group/option_name 皆為 null 代表整個
+// 品項售完;兩者都有值代表只有該客製選項售完。
+export interface SoldOutMark {
+  menu_item_id: number
+  option_group: string | null
+  option_name: string | null
+  created_by: string
+}
 export interface OrderOut {
   id: number
   restaurant_id: number
@@ -130,6 +138,7 @@ export interface OrderOut {
   status: string
   is_locked: boolean
   items: OrderItemRow[]
+  sold_outs: SoldOutMark[]
 }
 export interface StatRow {
   label: string
@@ -291,6 +300,14 @@ export const api = {
     `/api/orders/${orderId}/items/${itemId}${qs({ user })}`, { method: 'DELETE' }),
   softDeleteItem: (orderId: number, itemId: number, actingUser: string) => request<OrderItemRow>(
     `/api/orders/${orderId}/items/${itemId}/soft-delete${qs({ acting_user: actingUser })}`, { method: 'PATCH' }),
+  // v0.19: 標記/取消「已售完」(訂單建立者 & admin),回傳這張訂單完整的售完清單。
+  toggleSoldOut: (
+    orderId: number,
+    payload: { menu_item_id: number; option_group?: string | null; option_name?: string | null; sold_out: boolean },
+    actingUser: string,
+  ) => request<SoldOutMark[]>(
+    `/api/orders/${orderId}/sold-out${qs({ acting_user: actingUser })}`,
+    { method: 'POST', body: JSON.stringify(payload) }),
   updateOrderDeadline: (orderId: number, deadlineAt: string | null, actingUser: string) => request<OrderOut>(
     `/api/orders/${orderId}/deadline${qs({ acting_user: actingUser })}`,
     { method: 'PATCH', body: JSON.stringify({ deadline_at: deadlineAt }) }),

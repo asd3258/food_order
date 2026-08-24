@@ -215,6 +215,23 @@ class OrderItemOut(BaseModel):
     is_deleted: bool
 
 
+# v0.19: 訂單期間的「已售完」標記 -- option_group/option_name 皆為 None 代表
+# 整個品項售完;兩者都有值代表只有該客製選項售完(見 models.OrderSoldOut)。
+class SoldOutOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    menu_item_id: int
+    option_group: Optional[str] = None
+    option_name: Optional[str] = None
+    created_by: str = ""
+
+
+class SoldOutToggleIn(BaseModel):
+    menu_item_id: int
+    option_group: Optional[str] = None
+    option_name: Optional[str] = None
+    sold_out: bool = True
+
+
 class OrderOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -224,6 +241,7 @@ class OrderOut(BaseModel):
     status: str
     is_locked: bool = False
     items: List[OrderItemOut] = []
+    sold_outs: List[SoldOutOut] = []
 
 
 class StatRow(BaseModel):

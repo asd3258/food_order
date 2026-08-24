@@ -191,6 +191,7 @@ class Order(Base):
 
     restaurant = relationship("Restaurant")
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    sold_outs = relationship("OrderSoldOut", back_populates="order", cascade="all, delete-orphan")
 
 
 class OrderItem(Base):
@@ -215,6 +216,33 @@ class OrderItem(Base):
 
     order = relationship("Order", back_populates="items")
     menu_item = relationship("MenuItem")
+
+
+class OrderSoldOut(Base):
+    """v0.19: 訂單開啟期間標記「已售完」的品項/客製選項。
+
+    範圍刻意綁在單一 order 上,不是改 MenuItem.is_active —— 今天賣完不代表
+    菜單上要永久拿掉,下一張訂單會重新從沒有任何售完標記開始。
+
+    - option_group / option_name 都是 NULL:整個品項售完(整列反灰、不能點)。
+    - 兩者都有值:只有那一個客製選項售完(選項反灰、不能勾)。
+
+    誰能標記由 check_permission(db, user, "訂單", "delete", order.initiator)
+    決定,也就是跟鎖單/結單/刪除別人品項同一組權限(訂單建立者 & admin)。
+    這是一張全新的表,Base.metadata.create_all() 會自動建立,不需要手動 migration。
+    """
+    __tablename__ = "order_sold_outs"
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
+    # 跟 OrderItem.menu_item_id 一樣用 ON DELETE CASCADE 的寬鬆處理:編輯餐廳存檔
+    # 會整批刪除重建 MenuItem,售完標記跟著失效即可,不該擋住存檔。
+    menu_item_id = Column(Integer, ForeignKey("menu_items.id", ondelete="CASCADE"), nullable=False)
+    option_group = Column(String, nullable=True)
+    option_name = Column(String, nullable=True)
+    created_by = Column(String, default="")
+    created_at = Column(DateTime, default=utcnow)
+
+    order = relationship("Order", back_populates="sold_outs")
 
 
 class OrderHistory(Base):

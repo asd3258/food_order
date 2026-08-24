@@ -8,3 +8,4 @@ backend/**/__pycache__/
 backend/food_order.db
 frontend/node_modules/
 frontend/dist/
+frontend/tsconfig.tsbuildinfo
