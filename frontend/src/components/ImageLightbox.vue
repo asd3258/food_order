@@ -10,6 +10,9 @@ const emit = defineEmits<{ close: [] }>()
 </script>
 
 <template>
+  <!-- Teleported for the same reason as the item sheet in OrderDetailView:
+       a fixed overlay inside the iOS scroll container gets clipped to it. -->
+  <Teleport to="body">
   <div class="overlay lightbox-overlay" :class="{ active: visible }" @click="emit('close')">
     <div class="lightbox-inner">
       <img v-if="imageUrl && !imageUrl.startsWith('placeholder:')" :src="imageUrl" @click.stop />
@@ -20,6 +23,7 @@ const emit = defineEmits<{ close: [] }>()
       <button class="lightbox-close" @click="emit('close')">×</button>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <style scoped>

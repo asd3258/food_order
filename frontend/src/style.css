@@ -154,7 +154,9 @@ select.time-select,input.time-select{padding:8px 9px;border:1px solid var(--bord
 .info-row .lbl{color:var(--muted);}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:50;}
 .overlay.active{display:flex;}
-.sheet{background:#fff;width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:18px;max-height:80vh;overflow-y:auto;}
+/* v0.21: the sheet now sits on the real screen bottom (overlays are
+   teleported to <body>), so pad past the iPhone home indicator. */
+.sheet{background:#fff;width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:18px;padding-bottom:calc(18px + env(safe-area-inset-bottom));max-height:80vh;max-height:80dvh;overflow-y:auto;}
 .sheet h3{margin:0 0 4px;font-size:17px;}
 .sheet .price{color:var(--muted);font-size:13px;margin-bottom:12px;}
 .opt-group-title{font-size:12px;font-weight:700;margin:12px 0 6px;}

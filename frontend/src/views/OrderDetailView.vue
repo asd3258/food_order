@@ -508,6 +508,12 @@ function labelParts(stat: StatRow): LabelPart[] {
       </div>
     </section>
 
+    <!-- v0.21: teleported to <body>. This overlay used to live inside
+         main.content, and on iOS Safari a scroll container with
+         -webkit-overflow-scrolling:touch becomes the containing block for
+         position:fixed descendants -- so the sheet was boxed into the
+         content area and the bottom nav drew over its action buttons. -->
+    <Teleport to="body">
     <div class="overlay" :class="{ active: sheetOpen }" @click.self="closeSheet">
       <div class="sheet order-item-sheet" v-if="sheetItem">
         <h3>{{ sheetItem.name }}</h3>
@@ -564,5 +570,6 @@ function labelParts(stat: StatRow): LabelPart[] {
         </div>
       </div>
     </div>
+    </Teleport>
   </template>
 </template>
