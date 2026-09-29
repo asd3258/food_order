@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api, type OrderOut, type RestaurantDetail, type MenuItem, type StatRow } from '../api'
+import { api, type OrderOut, type RestaurantDetail, type MenuItem, type Photo, type StatRow } from '../api'
 import { HOURS, MINUTES, formatDeadline, isoToParts, partsToIso, type DeadlineParts, defaultDeadline } from '../deadline'
 import { userStore } from '../stores/user'
 import { confirmAction, alertWarning } from '../stores/confirm'
 import { toast } from '../stores/toast'
 import { canWebShare, copyLink, copyText, shareLink } from '../share'
 import { requireLogin } from '../auth'
+import ImageLightbox from '../components/ImageLightbox.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -17,6 +18,21 @@ const order = ref<OrderOut | null>(null)
 const restaurant = ref<RestaurantDetail | null>(null)
 const stats = ref<StatRow[]>([])
 const editDeadline = ref<DeadlineParts | null>(null)
+const photoTrackRef = ref<HTMLElement | null>(null)
+const lightboxOpen = ref(false)
+const lightboxPhoto = ref<Photo | null>(null)
+
+function scrollPhotos(dir: number) {
+  const track = photoTrackRef.value
+  if (track) track.scrollBy({ left: dir * track.clientWidth, behavior: 'smooth' })
+}
+function openPhoto(photo: Photo) {
+  lightboxPhoto.value = photo
+  lightboxOpen.value = true
+}
+function closePhoto() {
+  lightboxOpen.value = false
+}
 
 // v0.11: 點餐清單同樣依「分類」分組(跟 RestaurantMenuView 的唯讀菜單一致),
 // 未分類項目排最後。
@@ -418,6 +434,34 @@ function labelParts(stat: StatRow): LabelPart[] {
       <button v-if="order.is_locked" class="btn btn-secondary" @click="closeOrder">完成訂單</button>
       <button class="btn btn-danger" @click="deleteOrder">刪除</button>
     </div>
+
+    <div class="menu-cat" style="font-size:12px;color:var(--muted);font-weight:600;">餐廳圖片</div>
+    <div class="carousel order-photo-carousel">
+      <div ref="photoTrackRef" class="carousel-track">
+        <div v-if="!restaurant.photos.length" class="carousel-slide" style="background:#999;">📷</div>
+        <div
+          v-for="photo in restaurant.photos"
+          :key="photo.id"
+          class="carousel-slide"
+          :style="photo.image_url.startsWith('placeholder:') ? { background: photo.image_url.replace('placeholder:', '') } : {}"
+          @click="openPhoto(photo)"
+        >
+          <img v-if="!photo.image_url.startsWith('placeholder:')" :src="photo.image_url" :alt="photo.caption || `${restaurant.name} 餐廳圖片`" />
+          <span v-else>📷</span>
+          <span v-if="photo.caption" class="cap">{{ photo.caption }}</span>
+        </div>
+      </div>
+      <button class="carousel-arrow left" @click="scrollPhotos(-1)">‹</button>
+      <button class="carousel-arrow right" @click="scrollPhotos(1)">›</button>
+    </div>
+
+    <ImageLightbox
+      :visible="lightboxOpen"
+      :image-url="lightboxPhoto?.image_url"
+      :placeholder-color="lightboxPhoto?.image_url.startsWith('placeholder:') ? lightboxPhoto.image_url.replace('placeholder:', '') : null"
+      :caption="lightboxPhoto?.caption"
+      @close="closePhoto"
+    />
 
     <div v-for="grp in groupedMenu" :key="grp.category">
       <div class="menu-cat" style="margin-top:14px;font-size:12px;color:var(--muted);font-weight:600;">{{ grp.category }}</div>
