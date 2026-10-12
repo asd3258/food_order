@@ -1,4 +1,5 @@
 import datetime as dt
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -59,6 +60,21 @@ def _line_label(item: models.OrderItem, db: Session) -> str:
         formatted_opts = opts
         
     return f"{name}({'/'.join(formatted_opts)})" if formatted_opts else name
+
+
+def _validate_integer_amount(db: Session, menu_item_id: int | None,
+                             selected_options: list[str], quantity: int) -> None:
+    mi = db.query(models.MenuItem).filter(models.MenuItem.id == menu_item_id).first()
+    if mi is None:
+        return
+    unit_price = Decimal(str(mi.price))
+    for opt_name in selected_options:
+        match = next((o for o in mi.options if o.option_name == opt_name), None)
+        if match:
+            unit_price += Decimal(str(match.extra_price or 0))
+    amount = unit_price * quantity
+    if not amount.is_finite() or amount != amount.to_integral_value():
+        raise HTTPException(422, f"品項總價不能有小數點（目前為 {amount:g} 元），請調整數量或選項，使總價為整數。")
 
 
 def _item_amount(item: models.OrderItem, db: Session) -> int:
@@ -132,6 +148,7 @@ def add_item(order_id: int, payload: schemas.OrderItemCreateIn, bg_tasks: Backgr
     if order.is_locked and not check_permission(db, payload.user, "訂單", "delete", order.initiator):
         raise HTTPException(403, "此訂單已鎖單，無法新增品項")
     _reject_if_sold_out(db, order_id, payload.menu_item_id, payload.selected_options)
+    _validate_integer_amount(db, payload.menu_item_id, payload.selected_options, payload.quantity)
     item = models.OrderItem(order_id=order_id, user=payload.user, menu_item_id=payload.menu_item_id,
                              selected_options=payload.selected_options, quantity=payload.quantity,
                              note=payload.note)
@@ -157,6 +174,7 @@ def update_own_item(order_id: int, item_id: int, payload: schemas.OrderItemCreat
     if item.user != payload.user:
         raise HTTPException(403, "只能修改自己加入的品項")
     _reject_if_sold_out(db, order_id, item.menu_item_id, payload.selected_options)
+    _validate_integer_amount(db, item.menu_item_id, payload.selected_options, payload.quantity)
     item.quantity = payload.quantity
     item.selected_options = payload.selected_options
     item.note = payload.note

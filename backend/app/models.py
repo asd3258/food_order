@@ -120,7 +120,7 @@ class MenuItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     restaurant_id = Column(Integer, ForeignKey("restaurants.id"), nullable=False)
     name = Column(String, nullable=False)
-    price = Column(Integer, nullable=False, default=0)
+    price = Column(Float, nullable=False, default=0.0)
     is_active = Column(Boolean, default=True)
     category = Column(String, default="")  # v0.10: brought back -- see 分類 grouping on the menu view
 

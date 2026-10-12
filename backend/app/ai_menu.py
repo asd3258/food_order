@@ -115,7 +115,7 @@ def _build_menu_prompt(reference_pairs: list[tuple[str, str]]) -> str:
     return (
         "這是一張餐廳菜單的照片。請幫我把上面每一個品項整理成 JSON 陣列,每個品項包含:\n"
         "- name:品項名稱(去掉多餘符號,用繁體中文)\n"
-        "- price:價格(整數,台幣;看不清楚就填 0)\n"
+        "- price:價格(數字,可含小數,台幣;看不清楚就填 0)\n"
         "- category:這個品項的分類(2~6個字,例如:主餐、飲料、小菜、湯品、加購、甜點)。"
         "以下是資料庫裡其他餐廳「已經有分類」的品項名稱,請優先沿用裡面已經出現過的分類名稱"
         "(名稱相同或非常相似的品項,直接套用同一個分類),只有真的沒有適合的分類時才自己想一個新的:\n"
@@ -137,7 +137,7 @@ _MENU_SCHEMA_GEMINI = {
         "type": "OBJECT",
         "properties": {
             "name": {"type": "STRING"},
-            "price": {"type": "INTEGER"},
+            "price": {"type": "NUMBER"},
             "category": {"type": "STRING"},
             "options": {
                 "type": "ARRAY",
@@ -173,7 +173,7 @@ _MENU_SCHEMA_OPENAI = {
                     "type": "object",
                     "properties": {
                         "name": {"type": "string"},
-                        "price": {"type": "integer"},
+                        "price": {"type": "number"},
                         "category": {"type": "string"},
                         "options": {
                             "type": "array",

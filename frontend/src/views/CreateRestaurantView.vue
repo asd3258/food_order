@@ -295,7 +295,7 @@ async function submit() {
       </div>
       <div class="form-group"><label>名稱</label><input v-model="it.name" /></div>
       <div class="form-group"><label>分類</label><input v-model="it.category" placeholder="例:主餐/飲料/小菜" /></div>
-      <div class="form-group"><label>價格</label><input v-model.number="it.price" type="number" /></div>
+      <div class="form-group"><label>價格</label><input v-model.number="it.price" type="number" step="any" /></div>
 
       <div style="margin-top:8px;">
         <div

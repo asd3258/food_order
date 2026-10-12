@@ -244,6 +244,13 @@ async function addToOrder() {
     await alertWarning(`選項「${soldOutPick.name}」已售完,請改選其他選項`)
     return
   }
+  const extraPrice = selected.reduce((sum, name) =>
+    sum + (item.options.find(option => option.option_name === name)?.extra_price || 0), 0)
+  const amount = (item.price + extraPrice) * sheetQty.value
+  if (!Number.isFinite(amount) || Math.abs(amount - Math.round(amount)) > 1e-8) {
+    await alertWarning(`品項總價不能有小數點（目前為 ${Number(amount.toFixed(8))} 元），請調整數量或選項，使總價為整數。`)
+    return
+  }
   await api.addOrderItem(orderId, {
     user: userStore.username,
     menu_item_id: sheetItem.value.id,

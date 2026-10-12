@@ -6,7 +6,7 @@ Postgres volume (`docker compose down -v`, which would also erase real
 orders/history/roster data) go here instead. Each function must be safe to
 run on every startup, forever.
 """
-from sqlalchemy import func, text
+from sqlalchemy import Float, func, inspect, text
 
 from app import models
 from app.database import SessionLocal, engine
@@ -62,6 +62,19 @@ def _alter_column_type(table: str, column: str, coltype: str) -> None:
             conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {coltype}"))
     except Exception:
         pass
+
+
+def _migrate_menu_price_to_float() -> None:
+    # SQLite already stores fractional values in INTEGER-affinity columns.
+    if engine.dialect.name == "sqlite":
+        return
+    column = next(c for c in inspect(engine).get_columns("menu_items") if c["name"] == "price")
+    if isinstance(column["type"], Float):
+        return
+    # Fail visibly if this migration cannot run; integer storage loses decimals.
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE menu_items ALTER COLUMN price TYPE FLOAT"))
+    print("[migrations] altered menu_items.price to FLOAT")
 
 
 def _migrate_extra_price_to_float() -> None:
@@ -267,6 +280,7 @@ def run_light_migrations() -> None:
     # v0.18: order_history_lines.is_paid
     _add_column_if_missing("order_history_lines", "is_paid", "BOOLEAN", default_sql="FALSE")
 
+    _migrate_menu_price_to_float()
     _migrate_extra_price_to_float()
 
     # v0.11: make sure the MinIO bucket exists/is public-read before the

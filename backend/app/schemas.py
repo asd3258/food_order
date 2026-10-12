@@ -61,7 +61,7 @@ class OptionChoiceOut(OptionChoiceIn):
 # ---------- Menu items ----------
 class MenuItemIn(BaseModel):
     name: str
-    price: int
+    price: float
     category: str = ""  # v0.10: brought back -- see 分類 grouping on the menu view
     options: List[OptionChoiceIn] = []
 
@@ -70,7 +70,7 @@ class MenuItemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
-    price: int
+    price: float
     category: str = ""
     options: List[OptionChoiceOut] = []
 
