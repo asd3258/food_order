@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { api, type OrderOut, type VoteBatchOut } from '../api'
+import { api, type HistoryEntry, type HistoryLine, type OrderOut, type VoteBatchOut } from '../api'
 import { formatDeadline } from '../deadline'
 import { userStore } from '../stores/user'
 import { toast } from '../stores/toast'
@@ -10,13 +10,28 @@ const router = useRouter()
 const orders = ref<OrderOut[]>([])
 const votes = ref<VoteBatchOut[]>([])
 const restaurantNames = ref<Record<number, string>>({})
+const todayHistory = ref<HistoryEntry[]>([])
+
+// 本地日期 YYYY-MM-DD,對應後端 closed_date 格式
+function todayStr() {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function sortedLines(lines: HistoryLine[]) {
+  return [...lines].sort((a, b) => a.user.localeCompare(b.user) || a.item_label.localeCompare(b.item_label))
+}
 
 async function load() {
-  const [o, v, restaurants] = await Promise.all([
+  const [o, v, restaurants, history] = await Promise.all([
     api.listOrders('open'),
     api.listVotes('open,failed'),
     api.listRestaurants(),
+    api.listHistory(),
   ])
+  const today = todayStr()
+  todayHistory.value = history.filter((h) => h.closed_date === today).sort((a, b) => a.id - b.id)
   // v0.12: 依訂單/投票編號由小到大排序(訂單1,訂單2,訂單4...),不依賴資料庫
   // 回傳的預設順序。
   orders.value = [...o].sort((a, b) => a.id - b.id)
@@ -98,4 +113,37 @@ function openVote(id: number) {
       <div class="chevron">›</div>
     </div>
   </section>
+
+  <section class="block">
+    <h2>今日歷史訂單</h2>
+    <div v-if="todayHistory.length === 0" class="empty">今天尚無歷史訂單</div>
+    <div v-else v-for="h in todayHistory" :key="h.id" class="card today-history">
+      <div class="name">{{ h.restaurant_name }}</div>
+      <table class="stat-table">
+        <tr>
+          <th>品項</th>
+          <th>人員</th>
+          <th>數量</th>
+          <th>金額</th>
+        </tr>
+        <tr v-for="l in sortedLines(h.lines)" :key="l.id">
+          <td>{{ l.item_label }}</td>
+          <td>{{ l.user }}</td>
+          <td>{{ l.quantity }}</td>
+          <td>${{ l.amount }}</td>
+        </tr>
+      </table>
+    </div>
+  </section>
 </template>
+
+<style scoped>
+.today-history {
+  display: block;
+}
+.today-history .name {
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 15px;
+}
+</style>
